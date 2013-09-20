@@ -64,7 +64,7 @@ public class IndexSetup {
 
 		throws IOException, InterruptedException {
 			
-			System.out.println("Reduce");
+			//System.out.println("Reduce");
 			
 			Iterator<Text> va = values.iterator();
 			

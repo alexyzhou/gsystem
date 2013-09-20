@@ -9,8 +9,8 @@ public class EntryA {
 		// TODO Auto-generated method stub
 		try {
 
-			String hadoopPath = "/Users/alex/Documents/workspace/lib/hadoop-1.2.1/bin/hadoop";
-			String jarPath = "/Users/alex/Documents/workspace/lib/GNode/GNode_IndexSetup.jar";
+			String hadoopPath = "/Users/alex/Documents/gsystem/lib/hadoop-1.2.1/bin/hadoop";
+			String jarPath = "/Users/alex/Documents/gsystem/lib/GNode/GNode_IndexSetup.jar";
 			String inputPath = "/Users/alex/Documents/DATA/out.csv";
 			String outputPath = "/Users/alex/Documents/DATA/output/";
 			String schemaID = "DS0001";
