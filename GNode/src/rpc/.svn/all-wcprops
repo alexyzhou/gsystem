@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/!svn/ver/6/trunk/GNode/src/rpc
+END
+GServerProtocol.java
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/6/trunk/GNode/src/rpc/GServerProtocol.java
+END
+GMasterProtocol.java
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/6/trunk/GNode/src/rpc/GMasterProtocol.java
+END
+RpcIOCommons.java
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/6/trunk/GNode/src/rpc/RpcIOCommons.java
+END

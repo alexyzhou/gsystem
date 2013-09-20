@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/6/trunk/GNode/src/data/writable
+END
+BPlusTreeStrStrWritable.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/6/trunk/GNode/src/data/writable/BPlusTreeStrStrWritable.java
+END
+VertexCollectionWritable.java
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/6/trunk/GNode/src/data/writable/VertexCollectionWritable.java
+END
+BPlusTreeStrLongWritable.java
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/6/trunk/GNode/src/data/writable/BPlusTreeStrLongWritable.java
+END
+EdgeCollectionWritable.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/6/trunk/GNode/src/data/writable/EdgeCollectionWritable.java
+END
+StringPairWritable.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/6/trunk/GNode/src/data/writable/StringPairWritable.java
+END
+StringMapWritable.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/6/trunk/GNode/src/data/writable/StringMapWritable.java
+END
