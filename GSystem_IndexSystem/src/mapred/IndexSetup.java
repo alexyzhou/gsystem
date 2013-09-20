@@ -60,18 +60,20 @@ public class IndexSetup {
 
 	extends Reducer<Text, Text, Text, Text> {
 
-		public void reduce(Text key, Iterator<Text> values, Context context)
+		public void reduce(Text key, Iterable<Text> values, Context context)
 
 		throws IOException, InterruptedException {
 			
 			System.out.println("Reduce");
 			
+			Iterator<Text> va = values.iterator();
+			
 			String v = "";
-			while(values.hasNext()) {
-				v+=values.next()+"@";
+			while(va.hasNext()) {
+				v+=va.next()+"@";
 			}
 			
-			System.out.println(v);
+			//System.out.println(v);
 			context.write(key, new Text(v.substring(0,v.length()-1)));
 		}
 	}
