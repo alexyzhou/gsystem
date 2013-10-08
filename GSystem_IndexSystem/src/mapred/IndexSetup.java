@@ -14,6 +14,8 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import rpc.GServerProtocol;
+import rpc.RpcIOCommons;
 import data.io.DS_DataType;
 import data.io.Data_Schema;
 
@@ -53,6 +55,11 @@ public class IndexSetup {
 			}
 
 			context.write(new Text(content), new Text(key.toString()));
+			
+			
+			String[] values = value.toString().split(",");
+			context.write(new Text(values[1]), value);
+			
 		}
 	}
 	
@@ -102,27 +109,27 @@ public class IndexSetup {
 
 		Configuration conf = new Configuration();
 		
-		Data_Schema schema = new Data_Schema();
-		schema.setId("1");
-		schema.setSeperator(',');
-		ArrayList<Data_Schema.ColumnDescription> columns = new ArrayList<Data_Schema.ColumnDescription>();
-		columns.add(schema.new ColumnDescription("transaction_id", DS_DataType.integer,"0", true));
-		columns.add(schema.new ColumnDescription("sender_id", DS_DataType.integer,"1", true));
-		columns.add(schema.new ColumnDescription("sender_restricted_flag", DS_DataType.bool,"2",false));	
-		columns.add(schema.new ColumnDescription("sender_account_creation_time", DS_DataType.integer,"3", true));
-		columns.add(schema.new ColumnDescription("sender_email_domain", DS_DataType.string,"4", true));
-		columns.add(schema.new ColumnDescription("receiver_id", DS_DataType.integer,"5",true));
-		columns.add(schema.new ColumnDescription("receiver_restricted_flag", DS_DataType.bool,"6",false));	
-		columns.add(schema.new ColumnDescription("receiver_account_creation_time", DS_DataType.integer,"7", true));
-		columns.add(schema.new ColumnDescription("receiver_email_domain", DS_DataType.string,"8", true));
-		columns.add(schema.new ColumnDescription("transaction_time", DS_DataType.integer,"9", true));
-		columns.add(schema.new ColumnDescription("sender_ip", DS_DataType.integer,"10", true));
-		columns.add(schema.new ColumnDescription("reveiver_ip", DS_DataType.integer,"11",true));
-		columns.add(schema.new ColumnDescription("tran_amount", DS_DataType.integer,"12",true));
-		columns.add(schema.new ColumnDescription("fraud_flag", DS_DataType.bool,"13",false));	
-		columns.add(schema.new ColumnDescription("creditcard_id", DS_DataType.integer,"14",true));
-		columns.add(schema.new ColumnDescription("creditcard_flag", DS_DataType.bool,"15",false));
-		schema.setColumns(columns);
+//		Data_Schema schema = new Data_Schema();
+//		schema.setId("1");
+//		schema.setSeperator(',');
+//		ArrayList<Data_Schema.ColumnDescription> columns = new ArrayList<Data_Schema.ColumnDescription>();
+//		columns.add(schema.new ColumnDescription("transaction_id", DS_DataType.integer,"0", true));
+//		columns.add(schema.new ColumnDescription("sender_id", DS_DataType.integer,"1", true));
+//		columns.add(schema.new ColumnDescription("sender_restricted_flag", DS_DataType.bool,"2",false));	
+//		columns.add(schema.new ColumnDescription("sender_account_creation_time", DS_DataType.integer,"3", true));
+//		columns.add(schema.new ColumnDescription("sender_email_domain", DS_DataType.string,"4", true));
+//		columns.add(schema.new ColumnDescription("receiver_id", DS_DataType.integer,"5",true));
+//		columns.add(schema.new ColumnDescription("receiver_restricted_flag", DS_DataType.bool,"6",false));	
+//		columns.add(schema.new ColumnDescription("receiver_account_creation_time", DS_DataType.integer,"7", true));
+//		columns.add(schema.new ColumnDescription("receiver_email_domain", DS_DataType.string,"8", true));
+//		columns.add(schema.new ColumnDescription("transaction_time", DS_DataType.integer,"9", true));
+//		columns.add(schema.new ColumnDescription("sender_ip", DS_DataType.integer,"10", true));
+//		columns.add(schema.new ColumnDescription("reveiver_ip", DS_DataType.integer,"11",true));
+//		columns.add(schema.new ColumnDescription("tran_amount", DS_DataType.integer,"12",true));
+//		columns.add(schema.new ColumnDescription("fraud_flag", DS_DataType.bool,"13",false));	
+//		columns.add(schema.new ColumnDescription("creditcard_id", DS_DataType.integer,"14",true));
+//		columns.add(schema.new ColumnDescription("creditcard_flag", DS_DataType.bool,"15",false));
+//		schema.setColumns(columns);
 		
 		// Trying to obtain the data_Schema
 //		InetSocketAddress address = new InetSocketAddress(sourceIP,
@@ -132,6 +139,9 @@ public class IndexSetup {
 //				new Configuration());
 //		Data_Schema schema = proxy.getDataSchema(dSchemaID);
 //		RPC.stopProxy(proxy);
+		
+		GServerProtocol proxy = RpcIOCommons.getGServerProtocol(sourceIP);
+		Data_Schema schema = proxy.getDataSchema(dSchemaID);
 
 		String[] range = { "", "" };
 
@@ -168,6 +178,8 @@ public class IndexSetup {
 		job.setCombinerClass(IndexReducer.class);
 		
 		job.setReducerClass(IndexReducer.class);
+		
+		job.setNumReduceTasks(1);
 
 		// job.setCombinerClass(IntSumReducer.class);
 

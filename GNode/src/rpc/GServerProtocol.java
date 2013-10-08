@@ -13,6 +13,7 @@ import data.writable.BPlusTreeStrStrWritable;
 import data.writable.EdgeCollectionWritable;
 import data.writable.StringMapWritable;
 import data.writable.VertexCollectionWritable;
+import ds.index.BinarySearchStringIndex;
 
 public interface GServerProtocol extends VersionedProtocol {
 		
@@ -93,7 +94,7 @@ public interface GServerProtocol extends VersionedProtocol {
 		public String removeDSIndex(String dsID, String dschemaID, String attriName);
 		public void removeDSIndex_Sync(String dsID, String dschemaID, String attriName);
 		//manage
-		public BPlusTreeStrLongWritable getDSIndex(String dsID, String dschemaID, String attriName);
+		public BinarySearchStringIndex getDSIndex(String dsID, String dschemaID, String attriName);
 		
 	// DataSet Schema
 		

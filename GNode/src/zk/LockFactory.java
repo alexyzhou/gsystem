@@ -28,8 +28,8 @@ public class LockFactory {
 		DEFAULT_ZOOKEEPER = new ZkObtainer().getZooKeeper();
 		
 		//check ZooBasepath
-		if (DEFAULT_ZOOKEEPER.exists(SystemConf.getInstance().zoo_gnode_base_path, false) == null) {
-			DEFAULT_ZOOKEEPER.create(SystemConf.getInstance().zoo_gnode_base_path, new String("").getBytes(),
+		if (DEFAULT_ZOOKEEPER.exists(SystemConf.getInstance().zoo_basePath, false) == null) {
+			DEFAULT_ZOOKEEPER.create(SystemConf.getInstance().zoo_basePath, new String("").getBytes(),
 					Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		}
 	}
@@ -45,9 +45,9 @@ public class LockFactory {
 		if (DEFAULT_ZOOKEEPER != null) {
 			String path;
 			if (isMaster == false) {
-				path = SystemConf.getInstance().zoo_gnode_base_path + "/" + ip;
+				path = SystemConf.getInstance().zoo_basePath + "/" + ip;
 			} else {
-				path = SystemConf.getInstance().zoo_gnode_base_path + "/" + MASTER_ID;
+				path = SystemConf.getInstance().zoo_basePath + "/" + MASTER_ID;
 			}
 
 			Stat stat = null;

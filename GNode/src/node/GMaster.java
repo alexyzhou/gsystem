@@ -1,7 +1,6 @@
 package node;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -263,11 +262,11 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		// Init GServer List
 		gServerList = new HashMap<GServerInfo, ArrayList<GServerInfo>>();
 		vGlobalTree = new BPlusTree<String, String>(
-				SystemConf.GSERVER_GLOBALINDEXTREE_FACTOR);
+				SystemConf.getInstance().gServer_graph_index_global_size);
 		eGlobalTree = new BPlusTree<String, String>(
-				SystemConf.GSERVER_GLOBALINDEXTREE_FACTOR);
+				SystemConf.getInstance().gServer_graph_index_global_size);
 		dsPathIndex = new BPlusTree<String, String>(
-				SystemConf.DATASET_PATHINDEX_FACTOR);
+				SystemConf.getInstance().gServer_data_pathIndex_global_size);
 		zooKeeper = new ZkObtainer().getZooKeeper();
 		zooKeeper.register(zooWatcher);
 
@@ -296,14 +295,14 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		rpcThread.start();
 
 		List<String> children = zooKeeper.getChildren(
-				SystemConf.getInstance().zoo_gnode_base_path, true);
+				SystemConf.getInstance().zoo_basePath, true);
 		for (String eve : children) {
 			if (!eve.equals(LockFactory.MASTER_ID)) {
 
 				String wl;
 				wl = new String(zooKeeper.getData(
-						SystemConf.getInstance().zoo_gnode_base_path + "/"
-								+ eve, false, null));
+						SystemConf.getInstance().zoo_basePath + "/" + eve,
+						false, null));
 				String[] ipv = wl.split(":");
 				// ipv[0] is gServer's ip address
 				if (ipv[1].equals("lock"))
@@ -352,7 +351,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			loopCount++;
 
 			if (loopCount == 2) {
-				scanServerList(SystemConf.getInstance().zoo_gnode_base_path);
+				scanServerList(SystemConf.getInstance().zoo_basePath);
 				loopCount = 0;
 			}
 
@@ -665,4 +664,36 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		}
 	}
 
+	@Override
+	public String createDSIndex(String dsID, String dschemaID, String attriName) {
+		double minUsage = Double.MAX_VALUE;
+		String targetIP = null;
+
+		try {
+			synchronized (gServerList) {
+				Set<GServerInfo> keySet = gServerList.keySet();
+				for (GServerInfo key : keySet) {
+					for (GServerInfo node : gServerList.get(key)) {
+						GServerProtocol proxy = RpcIOCommons
+								.getGServerProtocol(node.ip);
+						double usage = proxy.reportUsageMark();
+						if (usage < minUsage) {
+							minUsage = usage;
+							targetIP = node.ip;
+						}
+
+					}
+				}
+
+			}
+			if (targetIP != null) {
+				GServerProtocol proxy = RpcIOCommons
+						.getGServerProtocol(targetIP);
+				return proxy.createDSIndex(dsID, dschemaID, attriName);
+			}
+		} catch (IOException e) {
+			return e.getLocalizedMessage();
+		}
+		return "ERROR: Can't find a targetServer";
+	}
 }

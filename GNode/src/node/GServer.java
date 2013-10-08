@@ -44,6 +44,7 @@ import data.writable.StringPairWritable;
 import data.writable.VertexCollectionWritable;
 import ds.LRULinkedHashMap;
 import ds.bplusTree.BPlusTree;
+import ds.index.BinarySearchStringIndex;
 
 public class GServer extends GNode implements Runnable, GServerProtocol {
 
@@ -56,10 +57,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				try {
 					stat = zooKeeper.exists(event.getPath(), null);
 					if (stat != null) {
-						if (event
-								.getPath()
-								.contains(
-										SystemConf.getInstance().zoo_gp_schema_basePath)) {
+						if (event.getPath().contains(
+								SystemConf.getInstance().zoo_basePath_gSchema)) {
 							String graphId = event.getPath().substring(
 									event.getPath().lastIndexOf('/') + 1);
 							GraphSchemaCollectionSerializable gsc = schema_cache
@@ -73,10 +72,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 									schema_cache.put(graphId, gsc);
 								}
 							}
-						} else if (event
-								.getPath()
-								.contains(
-										SystemConf.getInstance().zoo_ds_schema_basePath)) {
+						} else if (event.getPath().contains(
+								SystemConf.getInstance().zoo_basePath_dSchema)) {
 							String dsSchemaId = event.getPath().substring(
 									event.getPath().lastIndexOf('/') + 1);
 							Data_Schema gsc = dsBufferPool_schema
@@ -112,22 +109,22 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		vBufferPool_w = new LinkedList<VertexInfo>();
 		eBufferPool_w = new LinkedList<EdgeInfo>();
 		vBufferPool_r = new LRULinkedHashMap<String, VertexInfo>(
-				SystemConf.GSERVER_MAX_RBUFFER_VERTEX);
+				SystemConf.getInstance().gServer_graph_rBuffer_vertex_size);
 		eBufferPool_r = new LRULinkedHashMap<String, EdgeInfo>(
-				SystemConf.GSERVER_MAX_RBUFFER_EDGE);
+				SystemConf.getInstance().gServer_graph_rBuffer_edge_size);
 
 		vBufferPool_rD = new LRULinkedHashMap<String, VertexData>(
-				SystemConf.GSERVER_MAX_RBUFFER_VERTEX);
+				SystemConf.getInstance().gServer_graph_rBuffer_vertex_size);
 		eBufferPool_rD = new LRULinkedHashMap<String, EdgeData>(
-				SystemConf.GSERVER_MAX_RBUFFER_EDGE);
+				SystemConf.getInstance().gServer_graph_rBuffer_edge_size);
 
 		vGlobalIndexTree = null;
 		eGlobalIndexTree = null;
 
 		vLocalIndexTree = new BPlusTree<String, String>(
-				SystemConf.GSERVER_LOCALINDEXTREE_FACTOR);
+				SystemConf.getInstance().gServer_graph_index_local_size);
 		eLocalIndexTree = new BPlusTree<String, String>(
-				SystemConf.GSERVER_LOCALINDEXTREE_FACTOR);
+				SystemConf.getInstance().gServer_graph_index_local_size);
 
 		hdfs_basePath_vertex = SystemConf.getInstance().hdfs_basePath + "/"
 				+ this.ip + "/" + "Vertex";
@@ -138,23 +135,24 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 		// For DataSetLayer
 		HDFS_Utilities.getInstance().CheckPath_All(
-				SystemConf.getInstance().hdfs_dsIndex_basePath);
-		dsPathIndex = null;
+				SystemConf.getInstance().hdfs_basePath_data_index);
+		dsPathIndex = new BPlusTree<String, String>(
+				SystemConf.getInstance().gServer_data_pathIndex_global_size);
 		dsBufferPool_index = new LRULinkedHashMap<>(
-				SystemConf.DATASET_INDEX_CACHE_FACTOR);
+				SystemConf.getInstance().gServer_data_buffer_index_size);
 		dsBufferPool_schema = new LRULinkedHashMap<>(
-				SystemConf.DATASET_SCHEMA_CACHE_FACTOR);
+				SystemConf.getInstance().gServer_data_buffer_schema_size);
 
 		// Read SchemaFile From ZooKeeper
 		schema_cache = new LRULinkedHashMap<String, GraphSchemaCollectionSerializable>(
-				SystemConf.GSERVER_MAX_GP_SCHEMA_CACHE);
+				SystemConf.getInstance().gServer_graph_buffer_schema_size);
 		zooKeeper = new ZkObtainer().getZooKeeper();
 		zooKeeper.register(zooWatcher);
 
 		ZkIOCommons.checkPath_All(zooKeeper,
-				SystemConf.getInstance().zoo_ds_schema_basePath);
+				SystemConf.getInstance().zoo_basePath_dSchema);
 		ZkIOCommons.checkPath_All(zooKeeper,
-				SystemConf.getInstance().zoo_gp_schema_basePath);
+				SystemConf.getInstance().zoo_basePath_gSchema);
 
 		// End of Read SchemaFile From Zookeeper
 
@@ -205,7 +203,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 	// For DataSetLayer
 	protected BPlusTree<String, String> dsPathIndex;
-	protected LRULinkedHashMap<String, BPlusTree<String, Long>> dsBufferPool_index;
+	protected LRULinkedHashMap<String, BinarySearchStringIndex> dsBufferPool_index;
 	protected LRULinkedHashMap<String, Data_Schema> dsBufferPool_schema;
 
 	// For HDFS
@@ -214,7 +212,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 	// Write
 	protected void writeVertex(VertexInfo data) throws IOException {
-		if (vBufferPool_w.size() == SystemConf.GSERVER_MAX_WBUFFER_VERTEX) {
+		if (vBufferPool_w.size() == SystemConf.getInstance().gServer_graph_wBuffer_vertex_size) {
 			flushToLocal(vBufferPool_w, GP_DataType.Vertex);
 		}
 		vBufferPool_w.add(data);
@@ -222,7 +220,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	}
 
 	protected void writeEdge(EdgeInfo data) throws IOException {
-		if (eBufferPool_w.size() == SystemConf.GSERVER_MAX_WBUFFER_EDGE) {
+		if (eBufferPool_w.size() == SystemConf.getInstance().gServer_graph_wBuffer_edge_size) {
 			flushToLocal(eBufferPool_w, GP_DataType.Edge);
 		}
 		eBufferPool_w.add(data);
@@ -322,10 +320,10 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			System.out.println("readVertexData begin init");
 			data.initWithInfo(info);
 			data.setSchema(readSchema(info.getGraph_id(), info.getSchema_id()));
-			if (data.getSchema()!=null) {
+			if (data.getSchema() != null) {
 				System.out.println("readVertexData schema read finished");
 			}
-			
+
 			data.readData(this);
 			System.out.println("dataRead finished");
 			vBufferPool_rD.put(id, data);
@@ -428,12 +426,12 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			// will read file from zookeeper
 			try {
 				org.apache.zookeeper.data.Stat stat = zooKeeper.exists(
-						SystemConf.getInstance().zoo_gp_schema_basePath + "/"
+						SystemConf.getInstance().zoo_basePath_gSchema + "/"
 								+ graph_id, null);
 				if (stat != null) {
 					gsc = (GraphSchemaCollectionSerializable) ZkIOCommons
 							.unserialize(zooKeeper.getData(
-									SystemConf.getInstance().zoo_gp_schema_basePath
+									SystemConf.getInstance().zoo_basePath_gSchema
 											+ "/" + graph_id, zooWatcher, stat));
 					if (gsc != null) {
 						System.out.println("ZK Read Succeed!");
@@ -479,8 +477,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				synchronized (SystemConf.getInstance().isIndexServer) {
 					if (SystemConf.getInstance().isIndexServer == true) {
 						CpuUsage usage = CpuUsage.getUsage();
-						if (usage.cpuUsage > SystemConf.GSERVER_MAXUSAGE_CPU
-								|| usage.memUsage > SystemConf.GSERVER_MAXUSAGE_MEM) {
+						if (usage.cpuUsage > SystemConf.getInstance().gServer_usage_cpu
+								|| usage.memUsage > SystemConf.getInstance().gServer_usage_mem) {
 							try {
 								GMasterProtocol proxy = RpcIOCommons
 										.getMasterProxy();
@@ -694,8 +692,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		CpuUsage usage;
 		try {
 			usage = CpuUsage.getUsage();
-			if (usage.cpuUsage < SystemConf.GSERVER_MAXUSAGE_CPU
-					&& usage.memUsage < SystemConf.GSERVER_MAXUSAGE_MEM) {
+			if (usage.cpuUsage < SystemConf.getInstance().gServer_usage_cpu
+					&& usage.memUsage < SystemConf.getInstance().gServer_usage_mem) {
 				return usage.cpuUsage + usage.memUsage;
 			} else {
 				return Double.MAX_VALUE;
@@ -1003,12 +1001,12 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			// will read file from zookeeper
 			try {
 				org.apache.zookeeper.data.Stat stat = zooKeeper.exists(
-						SystemConf.getInstance().zoo_gp_schema_basePath + "/"
+						SystemConf.getInstance().zoo_basePath_gSchema + "/"
 								+ graph_id, null);
 				if (stat != null) {
 					gsc = (GraphSchemaCollectionSerializable) ZkIOCommons
 							.unserialize(zooKeeper.getData(
-									SystemConf.getInstance().zoo_gp_schema_basePath
+									SystemConf.getInstance().zoo_basePath_gSchema
 											+ "/" + graph_id, zooWatcher, stat));
 					if (gsc != null) {
 						gsc.schemas.put(gs.getsId(), gs);
@@ -1039,12 +1037,12 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			// will read file from zookeeper
 			try {
 				org.apache.zookeeper.data.Stat stat = zooKeeper.exists(
-						SystemConf.getInstance().zoo_gp_schema_basePath + "/"
+						SystemConf.getInstance().zoo_basePath_gSchema + "/"
 								+ graph_id, null);
 				if (stat != null) {
 					gsc = (GraphSchemaCollectionSerializable) ZkIOCommons
 							.unserialize(zooKeeper.getData(
-									SystemConf.getInstance().zoo_gp_schema_basePath
+									SystemConf.getInstance().zoo_basePath_gSchema
 											+ "/" + graph_id, zooWatcher, stat));
 					if (gsc != null) {
 						gsc.schemas.put(schema_id, null);
@@ -1231,36 +1229,64 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}
 	}
 
-	
 	@Override
-	public String createDSIndex(String dsID, String dschemaID, String attriName) {
+	public String createDSIndex(final String dsID, final String dschemaID,
+			final String attriName) {
+		
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				try {
+					String jarPath = SystemConf.getInstance().gServer_data_index_setup_jarPath;
+					String inputPath = getDataSetPath_Remote(dsID);
+					String outputPath = SystemConf.getInstance().hdfs_tempPath_data_index
+							+ "/" + new Date().getTime();
+
+					String sourceIP = SystemConf.getInstance().localIP;
+
+					Process p = Runtime.getRuntime().exec(
+							"hadoop jar " + jarPath + " " + inputPath + " "
+									+ outputPath + " " + dschemaID + " " + attriName
+									+ " " + sourceIP);
+
+					BufferedReader br = new BufferedReader(new InputStreamReader(
+							p.getErrorStream()));
+					String line;
+					while ((line = br.readLine()) != null)
+						System.out.println(line);
+
+					transformIndexObj(outputPath, dsID, dschemaID, attriName);
+
+				} catch (java.io.IOException e) {
+					return;
+				}
+			}
+		}).start();
+		
+		return "";
+	}
+
+	protected void transformIndexObj(String outputPath, String dsID,
+			String dschemaID, String attriName) {
+		// Transform the index into an Object
+		// TODO ...
+		BinarySearchStringIndex bsi;
 		try {
-			
-			String jarPath = "./GNode_IndexSetup.jar";
-			String inputPath = getDataSetPath_Remote(dsID);
-			String outputPath = "/Users/alex/Documents/DATA/output/";
-			
-			String sourceIP = SystemConf.getInstance().localIP;
-
-			Process p = Runtime.getRuntime().exec(
-					"hadoop jar " + jarPath + " " + inputPath + " "
-							+ outputPath + " " + dschemaID + " " + attriName
-							+ " " + sourceIP);
-
-			BufferedReader br = new BufferedReader(new InputStreamReader(
-					p.getInputStream()));
-			String line;
-			while ((line = br.readLine()) != null)
-				System.out.println(line);
-
-			//Transform the index into an Object
-			//TODO ...
-			
+			bsi = HDFS_Utilities.getInstance().createBSIndex(
+					outputPath + "/part-r-00000", dsID, dschemaID, attriName);
+			dsBufferPool_index.put(BinarySearchStringIndex.getFileName(dsID,
+					dschemaID, attriName), bsi);
+			HDFS_Utilities.getInstance().flushObjectToHDFS(
+					SystemConf.getInstance().hdfs_basePath_data_index,
+					BinarySearchStringIndex.getFileName(dsID, dschemaID,
+							attriName), bsi);
+			HDFS_Utilities.getInstance().removeFolder_Recursive(outputPath);
 			System.out.println("Finished!");
-			return "";
-
-		} catch (java.io.IOException e) {
-			return "IOException " + e.getMessage();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
@@ -1272,11 +1298,18 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 	@Override
 	public String removeDSIndex(String dsID, String dschemaID, String attriName) {
-		dsBufferPool_index.remove(dsID + "@" + dschemaID + "@" + attriName);
+		dsBufferPool_index.remove(BinarySearchStringIndex.getFileName(dsID,
+				dschemaID, attriName));
 		try {
 			HDFS_Utilities.getInstance().deleteFile(
-					SystemConf.getInstance().hdfs_dsIndex_basePath + "/" + dsID
-							+ "@" + dschemaID + "@" + attriName);
+					SystemConf.getInstance().hdfs_basePath_data_index
+							+ "/"
+							+ BinarySearchStringIndex.getFileName(dsID,
+									dschemaID, attriName));
+			GMasterProtocol gMasterProtocol = RpcIOCommons.getMasterProxy();
+			gMasterProtocol.notifyDataSet_Index_Remove(
+					SystemConf.getInstance().localIP, dsID, dschemaID,
+					attriName);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			return e.getLocalizedMessage();
@@ -1287,25 +1320,29 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	@Override
 	public void removeDSIndex_Sync(String dsID, String dschemaID,
 			String attriName) {
-		dsBufferPool_index.remove(dsID + "@" + dschemaID + "@" + attriName);
+		dsBufferPool_index.remove(BinarySearchStringIndex.getFileName(dsID,
+				dschemaID, attriName));
 	}
 
 	@Override
-	public BPlusTreeStrLongWritable getDSIndex(String dsID, String dschemaID,
+	public BinarySearchStringIndex getDSIndex(String dsID, String dschemaID,
 			String attriName) {
-		BPlusTree<String, Long> target = dsBufferPool_index.get(dsID + "@"
-				+ dschemaID + "@" + attriName);
+		BinarySearchStringIndex target = dsBufferPool_index
+				.get(BinarySearchStringIndex.getFileName(dsID, dschemaID,
+						attriName));
 		if (target != null) {
-			return new BPlusTreeStrLongWritable(target);
+			return target;
 		} else {
 			// Read HDFS file
-			BPlusTreeStrLongWritable obj;
+			BinarySearchStringIndex obj;
 			try {
-				obj = (BPlusTreeStrLongWritable) HDFS_Utilities.getInstance()
+				obj = (BinarySearchStringIndex) HDFS_Utilities
+						.getInstance()
 						.readFileToObject(
-								SystemConf.getInstance().hdfs_dsIndex_basePath
-										+ "/" + dsID + "@" + dschemaID + "@"
-										+ attriName);
+								SystemConf.getInstance().hdfs_basePath_data_index
+										+ "/"
+										+ BinarySearchStringIndex.getFileName(
+												dsID, dschemaID, attriName));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -1330,9 +1367,10 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		// Update Cache First
 		dsBufferPool_schema.remove(dschemaID);
 		// Update File
-		return ZkIOCommons.removeZKFile(zooKeeper,
-				SystemConf.getInstance().zoo_ds_schema_basePath + "/"
-						+ dschemaID);
+		return ZkIOCommons
+				.removeZKFile(zooKeeper,
+						SystemConf.getInstance().zoo_basePath_dSchema + "/"
+								+ dschemaID);
 	}
 
 	@Override
@@ -1344,12 +1382,12 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			// File file
 			try {
 				Stat stat = zooKeeper.exists(
-						SystemConf.getInstance().zoo_ds_schema_basePath + "/"
+						SystemConf.getInstance().zoo_basePath_dSchema + "/"
 								+ dschemaID, null);
 				if (stat != null) {
 					Data_Schema gsc = (Data_Schema) ZkIOCommons
 							.unserialize(zooKeeper.getData(
-									SystemConf.getInstance().zoo_ds_schema_basePath
+									SystemConf.getInstance().zoo_basePath_dSchema
 											+ "/" + dschemaID, zooWatcher, stat));
 					dsBufferPool_schema.put(dschemaID, gsc);
 					return gsc;

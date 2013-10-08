@@ -10,7 +10,7 @@ public class EntryA {
 		try {
 
 			String hadoopPath = "/Users/alex/Documents/gsystem/lib/hadoop-1.2.1/bin/hadoop";
-			String jarPath = "/Users/alex/Documents/gsystem/lib/GNode/GNode_IndexSetup.jar";
+			String jarPath = "./gsystem/lib/GNode/GNode_IndexSetup.jar";
 			String inputPath = "/Users/alex/Documents/DATA/out.csv";
 			String outputPath = "/Users/alex/Documents/DATA/output/";
 			String schemaID = "DS0001";
@@ -26,7 +26,8 @@ public class EntryA {
 							+ " " + sourceIP);
 
 			BufferedReader br = new BufferedReader(new InputStreamReader(
-					p.getInputStream()));
+					p.getErrorStream()));
+			
 			String line;
 			while ((line = br.readLine()) != null)
 				System.out.println(line);

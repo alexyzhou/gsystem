@@ -69,7 +69,7 @@ public class ZkIOCommons {
 	public static boolean setSchemaFile(ZooKeeper zk, String graph_id,
 			GraphSchemaCollectionSerializable gsc) {
 
-		String path = SystemConf.getInstance().zoo_gp_schema_basePath + "/"
+		String path = SystemConf.getInstance().zoo_basePath_gSchema + "/"
 				+ graph_id;
 
 		org.apache.zookeeper.data.Stat stat;
@@ -123,7 +123,7 @@ public class ZkIOCommons {
 	public static boolean setDSSchemaFile(ZooKeeper zk, String dsSchemaId,
 			Data_Schema gsc) {
 
-		String path = SystemConf.getInstance().zoo_ds_schema_basePath + "/"
+		String path = SystemConf.getInstance().zoo_basePath_dSchema + "/"
 				+ dsSchemaId;
 
 		org.apache.zookeeper.data.Stat stat;

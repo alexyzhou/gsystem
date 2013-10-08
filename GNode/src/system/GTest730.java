@@ -25,7 +25,7 @@ import data.writable.EdgeCollectionWritable;
 
 public class GTest730 {
 
-	private static String GRAPH_DESCRIPTION_FILEPATH = "/home/alex/GS2/part-r-00000";
+	private static String GRAPH_DESCRIPTION_FILEPATH = "/home/alex/Documents/DATA/part-r-00000";
 	private static int VERTEX_NUM = 50;
 	
 	public static void main(String[] args) {

@@ -18,37 +18,39 @@ public class GSystemEntry {
 
 	protected static final String MASTER_IP = "gServer.master.ip";
 
+	// For Zoo
 	protected static final String ZOO_BASEPATH = "zoo.basepath";
-	protected static final String ZOO_SCHEMA_BASEPATH = "zoo.basepath.gschema";
+	protected static final String ZOO_BASEPATH_GSCHEMA = "zoo.basepath.gschema";
+	protected static final String ZOO_BASEPATH_DSCHEMA = "zoo.basepath.dSchema";
 	protected static final String ZOO_URL = "zoo.url";
 
-	// For BufferPool
-	protected static final String GSERVER_MAX_RBUFFER_EDGE = "gServer.buffer.r.edge";
-	protected static final String GSERVER_MAX_RBUFFER_VERTEX = "gServer.buffer.r.vertex";
-	protected static final String GSERVER_MAX_WBUFFER_EDGE = "gServer.buffer.w.edge";
-	protected static final String GSERVER_MAX_WBUFFER_VERTEX = "gServer.buffer.w.vertex";
+	// For Buffer_Size and Index_MAXSize
+	protected static final String GSERVER_GRAPH_RBUFFER_EDGE_SIZE = "gServer.graph.buffer.r.edge";
+	protected static final String GSERVER_GRAPH_RBUFFER_VERTEX_SIZE = "gServer.graph.buffer.r.vertex";
+	protected static final String GSERVER_GRAPH_WBUFFER_EDGE_SIZE = "gServer.graph.buffer.w.edge";
+	protected static final String GSERVER_GRAPH_WBUFFER_VERTEX_SIZE = "gServer.graph.buffer.w.vertex";
 
-	protected static final String GSERVER_MAX_SCHEMACACHE = "gServer.buffer.schema";
+	protected static final String GSERVER_GRAPH_BUFFER_SCHEMA_SIZE = "gServer.graph.buffer.schema";
 
-	protected static final String GSERVER_MAX_GLOBALINDEX_FACTOR = "gServer.buffer.index.global";
-	protected static final String GSERVER_MAX_LOCALINDEX_FACTOR = "gServer.buffer.index.local";
+	protected static final String GSERVER_GRAPH_GLOBALINDEX_SIZE = "gServer.graph.index.global";
+	protected static final String GSERVER_GRAPH_LOCALINDEX_SIZE = "gServer.graph.index.local";
+
+	protected static final String GSERVER_DATA_PATHINDEX_GLOBAL_SIZE = "gServer.data.pathIndex.global";
+	protected static final String GSERVER_DATA_BUFFER_INDEX_SIZE = "gServer.data.buffer.index";
+	protected static final String GSERVER_DATA_BUFFER_SCHEMA_SIZE = "gServer.data.buffer.schema";
+
+	// For MapReduce JARs
+	protected static final String GSERVER_DATA_INDEX_SETUP_JARPATH = "gServer.data.index.setup.jarpath";
+
+	// For Usage Threshold
 	protected static final String GSERVER_MAX_USAGE_CPU = "gServer.usage.cpu";
 	protected static final String GSERVER_MAX_USAGE_MEM = "gServer.usage.mem";
 
 	// For HDFS
 	protected static final String HDFS_BASEPATH = "hdfs.basepath";
-	
-	// For DataLayer
-	protected static final String DATASET_PATHINDEX_FACTOR = "dataSet.pathIndex.global";
-	protected static final String HDFS_DSINDEX_BASEPATH = "hdfs.dataset.index.basepath";
-	protected static final String DATASET_INDEX_CACHE_FACTOR = "dataSet.buffer.index.factor";
-	protected static final String ZOO_DS_SCHEMA_BASEPATH = "zoo.basepath.dsSchema";
-	protected static final String GSERVER_MAX_DS_SCHEMA_CACHE = "gServer.buffer.schema.ds";
+	protected static final String HDFS_BASEPATH_DATA_INDEX = "hdfs.basepath.data.index";
+	protected static final String HDFS_TEMPPATH_DATA_INDEX = "hdfs.temppath.data.index";
 
-	// For DataIndex
-	protected static final String DATASET_INDEXSETUP_JARPATH = "dataSet.indexSetup.jarPath";
-	protected static final String DATASET_INDEXSETUP_TEMPPATH = "dataSet.indexSetup.tempPath";
-	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
@@ -81,43 +83,56 @@ public class GSystemEntry {
 			// properties load begin
 			{
 				SystemConf.getInstance().masterIP = prop.getProperty(MASTER_IP);
+				SystemConf.getInstance().gServer_graph_rBuffer_edge_size = new Integer(
+						prop.getProperty(GSERVER_GRAPH_RBUFFER_EDGE_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_graph_rBuffer_vertex_size = new Integer(
+						prop.getProperty(GSERVER_GRAPH_RBUFFER_VERTEX_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_graph_wBuffer_edge_size = new Integer(
+						prop.getProperty(GSERVER_GRAPH_WBUFFER_EDGE_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_graph_wBuffer_vertex_size = new Integer(
+						prop.getProperty(GSERVER_GRAPH_WBUFFER_VERTEX_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_graph_buffer_schema_size = new Integer(
+						prop.getProperty(GSERVER_GRAPH_BUFFER_SCHEMA_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_graph_index_global_size = new Integer(
+						prop.getProperty(GSERVER_GRAPH_GLOBALINDEX_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_graph_index_local_size = new Integer(
+						prop.getProperty(GSERVER_GRAPH_LOCALINDEX_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_data_pathIndex_global_size = new Integer(
+						prop.getProperty(GSERVER_DATA_PATHINDEX_GLOBAL_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_data_buffer_index_size = new Integer(
+						prop.getProperty(GSERVER_DATA_BUFFER_INDEX_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_data_buffer_schema_size = new Integer(
+						prop.getProperty(GSERVER_DATA_BUFFER_SCHEMA_SIZE))
+						.intValue();
+				SystemConf.getInstance().gServer_data_index_setup_jarPath = prop
+						.getProperty(GSERVER_DATA_INDEX_SETUP_JARPATH);
+				SystemConf.getInstance().gServer_usage_cpu = new Integer(
+						prop.getProperty(GSERVER_MAX_USAGE_CPU));
+				SystemConf.getInstance().gServer_usage_mem = new Integer(
+						prop.getProperty(GSERVER_MAX_USAGE_MEM));
 				SystemConf.getInstance().hdfs_basePath = prop
 						.getProperty(HDFS_BASEPATH);
-				SystemConf.getInstance().zoo_gp_schema_basePath = prop
-						.getProperty(ZOO_SCHEMA_BASEPATH);
-				SystemConf.getInstance().zoo_gnode_base_path = prop
+				SystemConf.getInstance().hdfs_basePath_data_index = prop
+						.getProperty(HDFS_BASEPATH_DATA_INDEX);
+				SystemConf.getInstance().hdfs_tempPath_data_index = prop
+						.getProperty(HDFS_TEMPPATH_DATA_INDEX);
+
+				SystemConf.getInstance().zoo_basePath = prop
 						.getProperty(ZOO_BASEPATH);
-				SystemConf.getInstance().zoo_gp_schema_basePath = prop
-						.getProperty(ZOO_SCHEMA_BASEPATH);
+				SystemConf.getInstance().zoo_basePath_gSchema = prop
+						.getProperty(ZOO_BASEPATH_GSCHEMA);
+				SystemConf.getInstance().zoo_basePath_dSchema = prop
+						.getProperty(ZOO_BASEPATH_DSCHEMA);
 				SystemConf.getInstance().zoo_url = prop.getProperty(ZOO_URL);
-				SystemConf.GSERVER_MAX_RBUFFER_EDGE = new Integer(
-						prop.getProperty(GSERVER_MAX_RBUFFER_EDGE)).intValue();
-				SystemConf.GSERVER_MAX_RBUFFER_VERTEX = new Integer(
-						prop.getProperty(GSERVER_MAX_RBUFFER_VERTEX))
-						.intValue();
-				SystemConf.GSERVER_MAX_WBUFFER_EDGE = new Integer(
-						prop.getProperty(GSERVER_MAX_WBUFFER_EDGE)).intValue();
-				SystemConf.GSERVER_MAX_WBUFFER_VERTEX = new Integer(
-						prop.getProperty(GSERVER_MAX_WBUFFER_VERTEX))
-						.intValue();
-				SystemConf.GSERVER_MAX_GP_SCHEMA_CACHE = new Integer(
-						prop.getProperty(GSERVER_MAX_SCHEMACACHE));
-				SystemConf.GSERVER_GLOBALINDEXTREE_FACTOR = new Integer(
-						prop.getProperty(GSERVER_MAX_GLOBALINDEX_FACTOR));
-				SystemConf.GSERVER_LOCALINDEXTREE_FACTOR = new Integer(
-						prop.getProperty(GSERVER_MAX_LOCALINDEX_FACTOR));
-				SystemConf.GSERVER_MAXUSAGE_CPU = new Integer(
-						prop.getProperty(GSERVER_MAX_USAGE_CPU));
-				SystemConf.GSERVER_MAXUSAGE_MEM = new Integer(
-						prop.getProperty(GSERVER_MAX_USAGE_MEM));
-				SystemConf.DATASET_PATHINDEX_FACTOR = new Integer(
-						prop.getProperty(DATASET_PATHINDEX_FACTOR));
-				SystemConf.getInstance().hdfs_dsIndex_basePath = prop.getProperty(HDFS_DSINDEX_BASEPATH);
-				SystemConf.DATASET_INDEX_CACHE_FACTOR = new Integer(
-						prop.getProperty(DATASET_INDEX_CACHE_FACTOR));
-				SystemConf.getInstance().zoo_ds_schema_basePath = prop.getProperty(ZOO_DS_SCHEMA_BASEPATH);
-				SystemConf.DATASET_SCHEMA_CACHE_FACTOR = new Integer(
-						prop.getProperty(GSERVER_MAX_DS_SCHEMA_CACHE));
 			}
 			// properties load finished
 
@@ -192,8 +207,6 @@ public class GSystemEntry {
 					SystemConf.getInstance().serviceThread.start();
 				}
 			}
-			
-			
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

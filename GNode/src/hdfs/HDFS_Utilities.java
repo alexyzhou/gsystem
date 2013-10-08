@@ -2,6 +2,7 @@ package hdfs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -10,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.Vector;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -17,9 +19,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 import data.io.Data_Schema;
 import data.io.Data_Schema.ColumnDescription;
+import ds.index.BinarySearchStringIndex;
 
 public class HDFS_Utilities {
 
@@ -80,7 +84,7 @@ public class HDFS_Utilities {
 
 			// TODO CheckPath
 
-			String path = basePath + "/" + new Date().getTime();
+			String path = basePath + "/" + fileName;
 
 			Path dst = new Path(path);
 
@@ -149,16 +153,52 @@ public class HDFS_Utilities {
 		return null;
 	}
 
-	public HashMap<String, String> readDataSetByOffset(String hdfsPath, Data_Schema ds, HashMap<Long, List<String>> pointer) {
-		HashMap<String, String> result = new HashMap<>();
+	public BinarySearchStringIndex createBSIndex(String hdfsFilePath,
+			String dsID, String dschemaID, String attriName) {
+		InputStream is = null;
+		BinarySearchStringIndex bsi = null;
 		try {
-			FSDataInputStream inputStream = fs.open(new Path(hdfsPath));
-			
+			is = fs.open(new Path(hdfsFilePath));
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+			if (br != null) {
+				bsi = new BinarySearchStringIndex(dsID,
+						dschemaID, attriName);
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					String[] values = line.split("\t");
+					if (values.length == 2) {
+						bsi.getValues().add(values[0]);
+						String[] offsets = values[1].split("@");
+						Vector<Long> offsetList = new Vector<Long>();
+						for (String offset : offsets) {
+							offsetList.add(new Long(offset));
+						}
+						bsi.getOffsets().add(offsetList);
+					}
+				}
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			IOUtils.closeStream(is);
+		}
+		return bsi;
+	}
+
+	public HashMap<String, String> readDataSetByOffset(String hdfsPath,
+			Data_Schema ds, HashMap<Long, List<String>> pointer) {
+		HashMap<String, String> result = new HashMap<>();
+		FSDataInputStream inputStream = null;
+		try {
+			inputStream = fs.open(new Path(hdfsPath));
+
 			Set<Long> keySet = pointer.keySet();
-			for (Long offset: keySet) {
-				
+			for (Long offset : keySet) {
+
 				inputStream.seek(offset);
-				BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+				BufferedReader br = new BufferedReader(new InputStreamReader(
+						inputStream));
 				String line = br.readLine();
 				System.out.println("HDFS Dataset Read line " + line);
 				if (ds.getSeperator() != '\0') {
@@ -166,7 +206,7 @@ public class HDFS_Utilities {
 					for (int i = 0; i < ds.getColumns().size(); i++) {
 						ColumnDescription cd = ds.getColumns().get(i);
 						if (pointer.get(offset).contains(cd.name)) {
-							//need to be collected
+							// need to be collected
 							result.put(cd.name, values[new Integer(cd.range)]);
 						}
 					}
@@ -174,9 +214,10 @@ public class HDFS_Utilities {
 					for (int i = 0; i < ds.getColumns().size(); i++) {
 						ColumnDescription cd = ds.getColumns().get(i);
 						if (pointer.get(offset).contains(cd.name)) {
-							//need to be collected
+							// need to be collected
 							String[] ranges = cd.range.split("-");
-							result.put(cd.name, line.substring(new Integer(ranges[0]),new Integer(ranges[1])));
+							result.put(cd.name, line.substring(new Integer(
+									ranges[0]), new Integer(ranges[1])));
 						}
 					}
 				}
@@ -185,7 +226,23 @@ public class HDFS_Utilities {
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
+		} finally {
+			if (inputStream != null)
+				IOUtils.closeStream(inputStream);
 		}
 		return result;
+	}
+	
+	public boolean removeFolder_Recursive(String hdfsPath) {
+		try {
+			Path p = new Path(hdfsPath);
+			if (fs.exists(p))
+				fs.delete(new Path(hdfsPath),true);
+			return true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
 	}
 }

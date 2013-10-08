@@ -44,6 +44,8 @@ public interface GMasterProtocol extends VersionedProtocol {
 			
 		//DataSet Index
 			
+			//insert
+			public String createDSIndex(String dsID, String dschemaID, String attriName);
 			//remove
 			public void notifyDataSet_Index_Remove(String source, String dsID, String dschemaID, String attriName);
 			

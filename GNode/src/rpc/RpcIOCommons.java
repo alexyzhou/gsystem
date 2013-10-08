@@ -1,6 +1,5 @@
 package rpc;
 
-import java.awt.List;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -8,9 +7,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;

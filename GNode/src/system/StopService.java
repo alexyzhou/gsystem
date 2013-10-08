@@ -41,6 +41,8 @@ public class StopService {
 				gSprotocol.stopService();
 			}
 			
+			System.out.println("Finished!");
+			
 			
 //			if (SystemConf.getInstance().localIP.equals(masterIP)) {
 //				InetSocketAddress address = new InetSocketAddress(SystemConf.getInstance().localIP,SystemConf.getInstance().RPC_GMASTER_PORT);
