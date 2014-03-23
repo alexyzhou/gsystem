@@ -106,34 +106,33 @@ public class GTest730 {
 		vertexSchema.setsId("GSV0001");
 		ArrayList<Attribute> vertexAttributes = new ArrayList<Attribute>();
 		vertexAttributes.add(vertexSchema.new Attribute("id",
-				DS_DataType.integer, "out"));
+				DS_DataType.integer));
 		vertexAttributes.add(vertexSchema.new Attribute("restricted",
-				DS_DataType.bool, "out"));
+				DS_DataType.bool));
 		vertexAttributes.add(vertexSchema.new Attribute("creation_time",
-				DS_DataType.integer, "out"));
+				DS_DataType.integer));
 		vertexAttributes.add(vertexSchema.new Attribute("email_domain",
-				DS_DataType.string, "out"));
+				DS_DataType.string));
 		vertexSchema.setAttributes(vertexAttributes);
 
 		Graph_Schema edgeSchema = new Graph_Schema();
 		edgeSchema.setsId("GSE0001");
 		ArrayList<Attribute> edgeAttributes = new ArrayList<Attribute>();
-		edgeAttributes.add(edgeSchema.new Attribute("id", DS_DataType.integer,
-				"out"));
+		edgeAttributes.add(edgeSchema.new Attribute("id", DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("toVertex",
-				DS_DataType.integer, "out"));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("creation_time",
-				DS_DataType.integer, "out"));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("sender_ip",
-				DS_DataType.integer, "out"));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("receiver_ip",
-				DS_DataType.integer, "out"));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("tran_amount",
-				DS_DataType.floats, "out"));
+				DS_DataType.floats));
 		edgeAttributes.add(edgeSchema.new Attribute("fraud_flag",
-				DS_DataType.bool, "out"));
+				DS_DataType.bool));
 		edgeAttributes.add(edgeSchema.new Attribute("creditCard_id",
-				DS_DataType.integer, "out"));
+				DS_DataType.integer));
 		edgeSchema.setAttributes(edgeAttributes);
 
 		try {

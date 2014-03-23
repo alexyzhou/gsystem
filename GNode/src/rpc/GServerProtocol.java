@@ -1,5 +1,10 @@
 package rpc;
 
+import java.util.UUID;
+
+import org.apache.hadoop.io.ArrayWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
 import data.io.Data_Schema;
@@ -8,10 +13,10 @@ import data.io.EdgeInfo;
 import data.io.Graph_Schema;
 import data.io.VertexData;
 import data.io.VertexInfo;
-import data.writable.BPlusTreeStrLongWritable;
 import data.writable.BPlusTreeStrStrWritable;
 import data.writable.EdgeCollectionWritable;
 import data.writable.StringMapWritable;
+import data.writable.TraverseJobParameters;
 import data.writable.VertexCollectionWritable;
 import ds.index.BinarySearchStringIndex;
 
@@ -41,6 +46,13 @@ public interface GServerProtocol extends VersionedProtocol {
 		public VertexData getVertexData(String id);
 		public EdgeInfo getEdgeInfo(String id);
 		public EdgeData getEdgeData(String id);
+		//query graph
+		public void traverseGraph_Async(String starting_v_id, TraverseJobParameters param);
+		public Text traverseGraph_Sync(String starting_v_id, TraverseJobParameters param);
+			//private methods
+			public void traverseGraph_Remote_Async(ArrayWritable array, TraverseJobParameters param, IntWritable currentLevel, String parentIP, UUID parentJobID);
+			public Text traverseGraph_Remote_Sync(ArrayWritable array, TraverseJobParameters param, IntWritable currentLevel);
+			public void traverseGraph_NotifyFinish(String result, UUID jobID);
 
 	//Graph Index
 		

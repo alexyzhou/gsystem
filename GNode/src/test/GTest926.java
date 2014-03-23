@@ -376,13 +376,13 @@ public class GTest926 {
 		vertexSchema.setsId(VERTEXSCHEMA_ID);
 		ArrayList<Attribute> vertexAttributes = new ArrayList<Attribute>();
 		vertexAttributes.add(vertexSchema.new Attribute("id",
-				DS_DataType.integer, DATASET_ID));
+				DS_DataType.integer));
 		vertexAttributes.add(vertexSchema.new Attribute("restricted",
-				DS_DataType.bool, DATASET_ID));
+				DS_DataType.bool));
 		vertexAttributes.add(vertexSchema.new Attribute("creation_time",
-				DS_DataType.integer, DATASET_ID));
+				DS_DataType.integer));
 		vertexAttributes.add(vertexSchema.new Attribute("email_domain",
-				DS_DataType.string, DATASET_ID));
+				DS_DataType.string));
 		vertexSchema.setAttributes(vertexAttributes);
 		return vertexSchema;
 	}
@@ -391,22 +391,21 @@ public class GTest926 {
 		Graph_Schema edgeSchema = new Graph_Schema();
 		edgeSchema.setsId(EDGESCHEMA_ID);
 		ArrayList<Attribute> edgeAttributes = new ArrayList<Attribute>();
-		edgeAttributes.add(edgeSchema.new Attribute("id", DS_DataType.integer,
-				DATASET_ID));
+		edgeAttributes.add(edgeSchema.new Attribute("id", DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("toVertex",
-				DS_DataType.integer, DATASET_ID));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("creation_time",
-				DS_DataType.integer, DATASET_ID));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("sender_ip",
-				DS_DataType.integer, DATASET_ID));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("receiver_ip",
-				DS_DataType.integer, DATASET_ID));
+				DS_DataType.integer));
 		edgeAttributes.add(edgeSchema.new Attribute("tran_amount",
-				DS_DataType.floats, DATASET_ID));
+				DS_DataType.floats));
 		edgeAttributes.add(edgeSchema.new Attribute("fraud_flag",
-				DS_DataType.bool, DATASET_ID));
+				DS_DataType.bool));
 		edgeAttributes.add(edgeSchema.new Attribute("creditCard_id",
-				DS_DataType.integer, DATASET_ID));
+				DS_DataType.integer));
 		edgeSchema.setAttributes(edgeAttributes);
 		return edgeSchema;
 	}

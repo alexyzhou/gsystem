@@ -202,14 +202,14 @@ public class RpcIOCommons implements Runnable {
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		
 		int bCount = 0;
 		while (bCount != BEGIN_TIME_INTERVAL) {
 			bCount++;
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -225,7 +225,7 @@ public class RpcIOCommons implements Runnable {
 				}
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}

@@ -17,6 +17,7 @@ import rpc.GMasterProtocol;
 import rpc.GServerProtocol;
 import rpc.RpcIOCommons;
 import system.SystemConf;
+import system.error.ErrorCode;
 import test.Debug;
 import zk.Lock;
 import zk.LockFactory;
@@ -43,7 +44,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 		@Override
 		public boolean equals(Object obj) {
-			// TODO Auto-generated method stub
+			
 			if (obj instanceof GServerInfo) {
 				if (((GServerInfo) obj).ip.equals(this.ip))
 					return true;
@@ -80,7 +81,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 		@Override
 		public void process(WatchedEvent event) {
-			// TODO Auto-generated method stub
+			
 			if (event.getType() == EventType.NodeChildrenChanged) {
 				// Serverlist changed!
 				System.out.println("[MASTER] NodeChildrenChanged!");
@@ -129,10 +130,10 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						}
 
 					} catch (KeeperException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 				}
@@ -145,10 +146,10 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 				}
 			}
 		} catch (KeeperException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 	}
@@ -169,7 +170,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 							RPC.stopProxy(proxy);
 						return;
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 
@@ -187,7 +188,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					RPC.stopProxy(proxy);
 				return;
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -236,7 +237,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 								proxy.announceIndexServer(targetIP.ip);
 							}
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
+							
 							e.printStackTrace();
 						}
 					}
@@ -274,7 +275,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 			@Override
 			public void run() {
-				// TODO Auto-generated method stub
+				
 				try {
 					rpcServer = RPC.getServer(GMaster.this,
 							SystemConf.getInstance().localIP,
@@ -283,10 +284,10 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					rpcServer.start();
 					rpcServer.join();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					
 					e.printStackTrace();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
+					
 					e.printStackTrace();
 				}
 
@@ -314,16 +315,16 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		
 		// TODO Simply output all available gServers
 		try {
 			init();
 		} catch (InterruptedException | KeeperException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 			return;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 			return;
 		}
@@ -358,7 +359,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			try {
 				Thread.sleep(15000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -368,20 +369,25 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			rpcServer.stop();
 			zooKeeper.close();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 	}
 
 	@Override
 	public long getProtocolVersion(String arg0, long arg1) throws IOException {
-		// TODO Auto-generated method stub
+		
 		return SystemConf.RPC_VERSION;
 	}
 
 	@Override
 	public String findTargetGServer_Store(VertexInfo information) {
-		// TODO Auto-generated method stub
+		
+		if (vGlobalTree.get(information.getId())!=null) {
+			//we already have this vertex
+			return ErrorCode.VERTEX_ALREADYEXIST;
+		}
+		
 		float maxMark = -100.0f;
 		String targetServerIP = "";
 		synchronized (gServerList) {
@@ -442,13 +448,13 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void stopService() {
-		// TODO Auto-generated method stub
+		
 		isRunning = false;
 	}
 
 	@Override
 	public void requestToChangeIndexServer(String source_ip) {
-		// TODO Auto-generated method stub
+		
 		double minUsage = Double.MAX_VALUE;
 		GServerInfo targerGSInfo = new GServerInfo(source_ip);
 		synchronized (gServerList) {
@@ -495,7 +501,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						RPC.stopProxy(proxy);
 				}
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 
@@ -504,7 +510,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void insertVertexInfoToIndex(String vid, String ip) {
-		// TODO Auto-generated method stub
+		
 		vGlobalTree.insertOrUpdate(vid, ip);
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
@@ -517,7 +523,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 				}
@@ -527,7 +533,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void insertEdgeInfoToIndex(String eid, String ip) {
-		// TODO Auto-generated method stub
+		
 		eGlobalTree.insertOrUpdate(eid, ip);
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
@@ -540,7 +546,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 				}
@@ -561,7 +567,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					
 					e.printStackTrace();
 				}
 			}
@@ -570,7 +576,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void removeEdgeFromIndex(String eid) {
-		// TODO Auto-generated method stub
+		
 		eGlobalTree.remove(eid);
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
@@ -582,7 +588,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					
 					e.printStackTrace();
 				}
 			}
@@ -603,7 +609,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 				}
@@ -625,7 +631,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 				}
@@ -647,7 +653,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						
 						e.printStackTrace();
 					}
 				}
@@ -657,6 +663,11 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public String findTargetGServer_StoreEdge(EdgeInfo information) {
+		
+		if (eGlobalTree.get(information.getId())!=null) {
+			return ErrorCode.EDGE_ALREADYEXIST;
+		}
+		
 		if (vGlobalTree.get(information.getTarget_vertex_id()) != null) {
 			return vGlobalTree.get(information.getSource_vertex_id());
 		} else {

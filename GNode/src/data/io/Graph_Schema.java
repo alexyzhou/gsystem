@@ -22,29 +22,26 @@ public class Graph_Schema implements Serializable, Writable {
 		private static final long serialVersionUID = -6316384602468026069L;
 		public String name;
 		public DS_DataType dataType;
-		public String related_dsID;
+		//public String related_dsID;
 		
 		public Attribute() {
 			
 		}
-		public Attribute(String name, DS_DataType type, String dsList) {
+		public Attribute(String name, DS_DataType type) {
 			this.name = name;
 			this.dataType = type;
-			this.related_dsID = dsList;
 		}
 		@Override
 		public void readFields(DataInput r) throws IOException {
 			// TODO Auto-generated method stub
 			this.name = r.readUTF();
 			this.dataType = DS_DataType.valueOf(r.readUTF());
-			this.related_dsID = r.readUTF();
 		}
 		@Override
 		public void write(DataOutput w) throws IOException {
 			// TODO Auto-generated method stub
 			w.writeUTF(this.name);
 			w.writeUTF(this.dataType.toString());
-			w.writeUTF(this.related_dsID);
 		}
 	}
 	
