@@ -55,7 +55,7 @@ public class GSystemEntry {
 		// TODO Auto-generated method stub
 
 		// Check Environment Variables
-		if (System.getenv("HADOOP_HOME") == null || System.getenv("HADOOP_PREFIX") == null) {
+		if (System.getenv("HADOOP_HOME") == null && System.getenv("HADOOP_PREFIX") == null) {
 			System.out.println("[ERROR] $HADOOP_HOME or $HADOOP_PREFIX is not set!");
 			return;
 		}
