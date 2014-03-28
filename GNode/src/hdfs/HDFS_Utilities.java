@@ -41,8 +41,13 @@ public class HDFS_Utilities {
 
 	private void init() throws IOException {
 		Configuration conf = new Configuration();
-		conf.addResource(new Path(System.getenv("HADOOP_HOME")
-				+ "/conf/core-site.xml"));
+		String url = "";
+		if (System.getenv("HADOOP_PREFIX") != null) {
+			url = System.getenv("HADOOP_PREFIX") + "/conf/core-site.xml";
+		} else {
+			url = System.getenv("HADOOP_HOME") + "/conf/core-site.xml";
+		}
+		conf.addResource(new Path(url));
 		this.fs = FileSystem.get(conf);
 	}
 

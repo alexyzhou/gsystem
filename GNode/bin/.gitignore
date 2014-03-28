@@ -1,3 +1,4 @@
+/.svn
 /data
 /ds
 /hdfs
@@ -5,3 +6,4 @@
 /rpc
 /system
 /test
+/zk

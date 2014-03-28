@@ -807,8 +807,21 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		if (SystemConf.getInstance().isIndexServer == true) {
 			return vGlobalIndexTree.get(vid);
 		} else {
-			return null;
+			if (SystemConf.getInstance().indexServerIP != null) {
+				GServerProtocol proxy;
+				try {
+					proxy = RpcIOCommons.getGServerProtocol(SystemConf
+							.getInstance().indexServerIP);
+					String target = proxy.queryVertexToServer(vid);
+					if (Debug.serverStopProxy)
+						RPC.stopProxy(proxy);
+					return target;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
+		return null;
 	}
 
 	@Override
@@ -817,8 +830,21 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		if (SystemConf.getInstance().isIndexServer == true) {
 			return eGlobalIndexTree.get(eid);
 		} else {
-			return null;
+			if (SystemConf.getInstance().indexServerIP != null) {
+				GServerProtocol proxy;
+				try {
+					proxy = RpcIOCommons.getGServerProtocol(SystemConf
+							.getInstance().indexServerIP);
+					String target = proxy.queryEdgeToServer(eid);
+					if (Debug.serverStopProxy)
+						RPC.stopProxy(proxy);
+					return target;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
+		return null;
 	}
 
 	protected boolean removeEdge_private(String id) {
