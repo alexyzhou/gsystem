@@ -31,11 +31,11 @@ public class StopService {
 			
 			InetSocketAddress address;
 			
-			address = new InetSocketAddress("10.60.0.221",SystemConf.getInstance().RPC_GMASTER_PORT);
+			address = new InetSocketAddress("10.60.162.100",SystemConf.getInstance().RPC_GMASTER_PORT);
 			GMasterProtocol gMprotocol = (GMasterProtocol) RPC.waitForProxy(GMasterProtocol.class, 0, address, new Configuration());
 			gMprotocol.stopService();
 
-			for (int i = 222; i < 226; i++) {
+			for (int i = 101; i < 103; i++) {
 				address = new InetSocketAddress("10.60.0."+i,SystemConf.getInstance().RPC_GSERVER_PORT);
 				GServerProtocol gSprotocol = (GServerProtocol) RPC.waitForProxy(GServerProtocol.class, SystemConf.RPC_VERSION, address, new Configuration());
 				gSprotocol.stopService();

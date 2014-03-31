@@ -43,14 +43,38 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		}
 
 		@Override
-		public boolean equals(Object obj) {
-			
-			if (obj instanceof GServerInfo) {
-				if (((GServerInfo) obj).ip.equals(this.ip))
-					return true;
-			}
-			return false;
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((ip == null) ? 0 : ip.hashCode());
+			return result;
 		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			GServerInfo other = (GServerInfo) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (ip == null) {
+				if (other.ip != null)
+					return false;
+			} else if (!ip.equals(other.ip))
+				return false;
+			return true;
+		}
+
+		private GMaster getOuterType() {
+			return GMaster.this;
+		}
+		
+		
 
 	}
 
@@ -81,7 +105,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 		@Override
 		public void process(WatchedEvent event) {
-			
+
 			if (event.getType() == EventType.NodeChildrenChanged) {
 				// Serverlist changed!
 				System.out.println("[MASTER] NodeChildrenChanged!");
@@ -130,10 +154,10 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						}
 
 					} catch (KeeperException e) {
-						
+
 						e.printStackTrace();
 					} catch (InterruptedException e) {
-						
+
 						e.printStackTrace();
 					}
 				}
@@ -146,10 +170,10 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 				}
 			}
 		} catch (KeeperException e) {
-			
+
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			
+
 			e.printStackTrace();
 		}
 	}
@@ -170,7 +194,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 							RPC.stopProxy(proxy);
 						return;
 					} catch (IOException e) {
-						
+
 						e.printStackTrace();
 					}
 
@@ -188,7 +212,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					RPC.stopProxy(proxy);
 				return;
 			} catch (IOException e) {
-				
+
 				e.printStackTrace();
 			}
 		}
@@ -237,7 +261,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 								proxy.announceIndexServer(targetIP.ip);
 							}
 						} catch (IOException e) {
-							
+
 							e.printStackTrace();
 						}
 					}
@@ -275,7 +299,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 			@Override
 			public void run() {
-				
+
 				try {
 					rpcServer = RPC.getServer(GMaster.this,
 							SystemConf.getInstance().localIP,
@@ -284,10 +308,10 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					rpcServer.start();
 					rpcServer.join();
 				} catch (IOException e) {
-					
+
 					e.printStackTrace();
 				} catch (InterruptedException e) {
-					
+
 					e.printStackTrace();
 				}
 
@@ -315,16 +339,16 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void run() {
-		
+
 		// TODO Simply output all available gServers
 		try {
 			init();
 		} catch (InterruptedException | KeeperException e) {
-			
+
 			e.printStackTrace();
 			return;
 		} catch (IOException e) {
-			
+
 			e.printStackTrace();
 			return;
 		}
@@ -359,7 +383,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			try {
 				Thread.sleep(15000);
 			} catch (InterruptedException e) {
-				
+
 				e.printStackTrace();
 			}
 		}
@@ -369,25 +393,25 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			rpcServer.stop();
 			zooKeeper.close();
 		} catch (InterruptedException e) {
-			
+
 			e.printStackTrace();
 		}
 	}
 
 	@Override
 	public long getProtocolVersion(String arg0, long arg1) throws IOException {
-		
+
 		return SystemConf.RPC_VERSION;
 	}
 
 	@Override
 	public String findTargetGServer_Store(VertexInfo information) {
-		
-		if (vGlobalTree.get(information.getId())!=null) {
-			//we already have this vertex
+
+		if (vGlobalTree.get(information.getId()) != null) {
+			// we already have this vertex
 			return ErrorCode.VERTEX_ALREADYEXIST;
 		}
-		
+
 		float maxMark = -100.0f;
 		String targetServerIP = "";
 		synchronized (gServerList) {
@@ -448,13 +472,16 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void stopService() {
-		
+
 		isRunning = false;
 	}
 
 	@Override
 	public void requestToChangeIndexServer(String source_ip) {
-		
+		if (Debug.printDetailedLog)
+			System.out.println("[" + SystemConf.getTime()
+					+ "][MASTER] Request To Change Index Server! " + source_ip);
+
 		double minUsage = Double.MAX_VALUE;
 		GServerInfo targerGSInfo = new GServerInfo(source_ip);
 		synchronized (gServerList) {
@@ -501,7 +528,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						RPC.stopProxy(proxy);
 				}
 			} catch (IOException e) {
-				
+
 				e.printStackTrace();
 			}
 
@@ -510,7 +537,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void insertVertexInfoToIndex(String vid, String ip) {
-		
+
 		vGlobalTree.insertOrUpdate(vid, ip);
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
@@ -523,7 +550,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						
+
 						e.printStackTrace();
 					}
 				}
@@ -533,7 +560,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void insertEdgeInfoToIndex(String eid, String ip) {
-		
+
 		eGlobalTree.insertOrUpdate(eid, ip);
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
@@ -546,7 +573,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						
+
 						e.printStackTrace();
 					}
 				}
@@ -567,7 +594,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
 				} catch (IOException e) {
-					
+
 					e.printStackTrace();
 				}
 			}
@@ -576,7 +603,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void removeEdgeFromIndex(String eid) {
-		
+
 		eGlobalTree.remove(eid);
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
@@ -588,7 +615,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
 				} catch (IOException e) {
-					
+
 					e.printStackTrace();
 				}
 			}
@@ -609,7 +636,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						
+
 						e.printStackTrace();
 					}
 				}
@@ -631,7 +658,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						
+
 						e.printStackTrace();
 					}
 				}
@@ -653,7 +680,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
-						
+
 						e.printStackTrace();
 					}
 				}
@@ -663,12 +690,12 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public String findTargetGServer_StoreEdge(EdgeInfo information) {
-		
-		if (eGlobalTree.get(information.getId())!=null) {
+
+		if (eGlobalTree.get(information.getId()) != null) {
 			return ErrorCode.EDGE_ALREADYEXIST;
 		}
-		
-		if (vGlobalTree.get(information.getTarget_vertex_id()) != null) {
+
+		if (vGlobalTree.get(information.getSource_vertex_id()) != null) {
 			return vGlobalTree.get(information.getSource_vertex_id());
 		} else {
 			return null;

@@ -321,7 +321,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		if (cache == null) {
 			VertexInfo info = getVertexInfo_Remote(id);
 			if (info == null) {
-				System.out.println("no such vertex");
+				System.out.println("no such vertex:" + id);
 				return null;
 			}
 			VertexData data = new VertexData();
@@ -717,6 +717,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 		System.out.println("Index Server Assigned!");
 		SystemConf.getInstance().isIndexServer = true;
+		SystemConf.getInstance().indexServerIP = SystemConf.getInstance().localIP;
 		vGlobalIndexTree = vertexIndex.getData();
 		eGlobalIndexTree = edgeIndex.getData();
 		this.dsPathIndex = dsPathIndex.getData();
@@ -735,7 +736,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 	@Override
 	public void putVertexInfoToIndex(String vid, String targetIP) {
-
+		System.out.println("[" + SystemConf.getTime()
+				+ "][gSERVER] vGlobalIndexTree Update! - " + vid + " - " + targetIP);
 		vGlobalIndexTree.insertOrUpdate(vid, targetIP);
 	}
 
@@ -776,26 +778,29 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	@Override
 	public VertexInfo getVertexInfo_Remote(String id) {
 
-		if (SystemConf.getInstance().indexServerIP != null) {
-			GServerProtocol proxy;
-			try {
-				proxy = RpcIOCommons.getGServerProtocol(SystemConf
-						.getInstance().indexServerIP);
-				String target = proxy.queryVertexToServer(id);
-				if (Debug.serverStopProxy)
-					RPC.stopProxy(proxy);
-				if (target.equals(SystemConf.getInstance().localIP)) {
-					return getVertexInfo(id);
-				}
-				proxy = RpcIOCommons.getGServerProtocol(target);
-				VertexInfo info = proxy.getVertexInfo(id);
-				if (Debug.serverStopProxy)
-					RPC.stopProxy(proxy);
-				return info;
-			} catch (IOException e) {
-
-				e.printStackTrace();
+		try {
+			String target = "";
+			if (SystemConf.getInstance().isIndexServer) {
+				target = queryVertexToServer(id);
+			} else if (SystemConf.getInstance().indexServerIP != null) {
+				GServerProtocol proxy = RpcIOCommons
+						.getGServerProtocol(SystemConf.getInstance().indexServerIP);
+				target = proxy.queryVertexToServer(id);
+			} else {
+				return null;
 			}
+
+			if (target.equals(SystemConf.getInstance().localIP)) {
+				return getVertexInfo(id);
+			}
+			GServerProtocol proxy = RpcIOCommons.getGServerProtocol(target);
+			VertexInfo info = proxy.getVertexInfo(id);
+			if (Debug.serverStopProxy)
+				RPC.stopProxy(proxy);
+			return info;
+		} catch (IOException e) {
+
+			e.printStackTrace();
 		}
 		return null;
 	}
@@ -803,6 +808,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	@Override
 	public String queryVertexToServer(String vid) {
 
+		System.out.println("[" + SystemConf.getTime()
+				+ "][gSERVER] Query Vertex To Server! vid="+vid);
+		
 		if (SystemConf.getInstance().isIndexServer == true) {
 			return vGlobalIndexTree.get(vid);
 		} else {
@@ -1471,10 +1479,12 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 		try {
 			if (param.method == TraversalMethod.BFS) {
-				return new Text(handleGraph_Traversal_Sync(starting_v_id, "0|0", param, 0));
+				return new Text(handleGraph_Traversal_Sync(starting_v_id,
+						"0|0", param, 0));
 			} else {
 				// DFS
-				return new Text(handleGraph_Traversal_Sync(starting_v_id, "0", param, 0));
+				return new Text(handleGraph_Traversal_Sync(starting_v_id, "0",
+						param, 0));
 			}
 		} catch (IOException e) {
 
@@ -1486,14 +1496,13 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	@Override
 	public Text traverseGraph_Remote_Sync(ArrayWritable array,
 			TraverseJobParameters param, IntWritable currentLevel) {
-		
+
 		if (currentLevel.get() <= param.maxdepth) {
 
 			TraverseJobIntermediateResult jobResult = traversalResult
 					.get(param.jobID);
 			if (jobResult == null) {
-				jobResult = new TraverseJobIntermediateResult(param, "", 0,
-						"");
+				jobResult = new TraverseJobIntermediateResult(param, "", 0, "");
 				synchronized (traversalResult) {
 					traversalResult.put(param.jobID, jobResult);
 				}
@@ -1501,13 +1510,13 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 			TraverseJobTargetVertex[] vertics = (TraverseJobTargetVertex[]) array
 					.get();
-			
+
 			StringBuilder resultBuilder = new StringBuilder();
-			
+
 			for (TraverseJobTargetVertex vertex : vertics) {
 
 				boolean alreadyVisited = false;
-				
+
 				for (String entry : jobResult.visitedVertices) {
 					if (entry.equals(vertex.id)) {
 						alreadyVisited = true;
@@ -1521,12 +1530,16 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 				try {
 					if (param.method == TraversalMethod.BFS) {
-						resultBuilder.append(";"+handleGraph_Traversal_Sync(vertex.id, vertex.prefix, param,
-								currentLevel.get()));
+						resultBuilder.append(";"
+								+ handleGraph_Traversal_Sync(vertex.id,
+										vertex.prefix, param,
+										currentLevel.get()));
 					} else {
 						// DFS
-						resultBuilder.append(";"+handleGraph_Traversal_Sync(vertex.id, vertex.prefix, param,
-								currentLevel.get()));
+						resultBuilder.append(";"
+								+ handleGraph_Traversal_Sync(vertex.id,
+										vertex.prefix, param,
+										currentLevel.get()));
 					}
 					jobResult.visitedVertices.add(vertex.id);
 				} catch (IOException e) {
@@ -1534,9 +1547,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					e.printStackTrace();
 				}
 			}
-			
+
 			return new Text(resultBuilder.toString());
-			
+
 		} else {
 			return new Text("");
 		}
@@ -1628,15 +1641,15 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}).start();
 
 	}
-	
-	protected String handleGraph_Traversal_Sync(String starting_v_id, String prefix,
-			TraverseJobParameters param, int currentLevel)
+
+	protected String handleGraph_Traversal_Sync(String starting_v_id,
+			String prefix, TraverseJobParameters param, int currentLevel)
 			throws IOException {
 
 		Map<String, LinkedList<TraverseJobTargetVertex>> remoteTarget = new HashMap<>();
 
 		StringBuilder result = new StringBuilder(prefix);
-		
+
 		VertexData vd = readVertexData(starting_v_id);
 		// visit the vertex
 		result.append("&" + vd.getData().get("creation_time"));
@@ -1644,7 +1657,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 		// now for every neighbors
 		if (param.method == TraversalMethod.BFS) {
-			Integer nextLevel = new Integer(prefix.split("|")[0]) + 1;
+			Integer nextLevel = new Integer(prefix.split("\\|")[0]) + 1;
 			for (_EdgeInfo ei : vd.getEdge_List()) {
 				if (VertexExist(ei.target_vertex_id)) {
 					// the neighbor is local
@@ -1654,6 +1667,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				} else {
 					// need to contact remote server
 					String remoteIP = queryVertexToServer(ei.target_vertex_id);
+					System.out.println("[" + SystemConf.getTime()
+							+ "][gSERVER] Graph Traverse, collect remoteIP! " + remoteIP);
 					if (remoteTarget.get(remoteIP) == null) {
 						remoteTarget.put(remoteIP,
 								new LinkedList<TraverseJobTargetVertex>());
@@ -1697,8 +1712,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 						TraverseJobTargetVertex.class);
 				aWritable.set((TraverseJobTargetVertex[]) remoteTarget.get(
 						remoteNodeIP).toArray());
-				result.append(";"+proxy.traverseGraph_Remote_Sync(aWritable, param, new IntWritable(
-						currentLevel + 1)).toString());
+				result.append(";"
+						+ proxy.traverseGraph_Remote_Sync(aWritable, param,
+								new IntWritable(currentLevel + 1)).toString());
 				if (Debug.serverStopProxy)
 					RPC.stopProxy(proxy);
 			} catch (IOException e) {
@@ -1706,7 +1722,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				e.printStackTrace();
 			}
 		}
-		
+
 		return result.toString();
 	}
 
@@ -1729,7 +1745,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 		// now for every neighbors
 		if (param.method == TraversalMethod.BFS) {
-			Integer nextLevel = new Integer(prefix.split("|")[0]) + 1;
+			Integer nextLevel = new Integer(prefix.split("\\|")[0]) + 1;
 			for (_EdgeInfo ei : vd.getEdge_List()) {
 				if (VertexExist(ei.target_vertex_id)) {
 					// the neighbor is local
@@ -1785,9 +1801,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				aWritable.set((TraverseJobTargetVertex[]) remoteTarget.get(
 						remoteNodeIP).toArray());
 				UUID subJobID = UUID.randomUUID();
-				proxy.traverseGraph_Remote_Async(aWritable, param, new IntWritable(
-						currentLevel + 1), SystemConf.getInstance().localIP,
-						subJobID);
+				proxy.traverseGraph_Remote_Async(aWritable, param,
+						new IntWritable(currentLevel + 1),
+						SystemConf.getInstance().localIP, subJobID);
 				jobTables.put(subJobID, jobID);
 				if (Debug.serverStopProxy)
 					RPC.stopProxy(proxy);
