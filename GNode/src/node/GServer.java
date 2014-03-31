@@ -1,7 +1,5 @@
 package node;
 
-import hdfs.HDFS_Utilities;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -31,6 +29,7 @@ import rpc.RpcIOCommons;
 import system.CpuUsage;
 import system.SystemConf;
 import test.Debug;
+import utilities.HDFS_Utilities;
 import zk.Lock;
 import zk.ZkIOCommons;
 import zk.ZkObtainer;

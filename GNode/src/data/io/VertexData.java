@@ -1,7 +1,5 @@
 package data.io;
 
-import hdfs.HDFS_Utilities;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -15,6 +13,7 @@ import node.GServer;
 
 import org.apache.hadoop.io.Writable;
 
+import utilities.HDFS_Utilities;
 import data.io.DataPointers_Entity._DSInfo;
 import data.io.VertexInfo._EdgeInfo;
 

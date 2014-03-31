@@ -11,6 +11,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import node.GMaster;
 import node.GServer;
+import utilities.Net_Utilities;
 import zk.Lock;
 import zk.LockFactory;
 
@@ -139,8 +140,7 @@ public class GSystemEntry {
 			LockFactory lockFactory = LockFactory.getInstance();
 
 			// Am I a MasterServer?
-			InetAddress address = InetAddress.getLocalHost();
-			SystemConf.getInstance().localIP = address.getHostAddress();
+			SystemConf.getInstance().localIP = Net_Utilities.obtainLocalIP();
 
 			System.err.println("[LocalIP]" + SystemConf.getInstance().localIP);
 			System.err
@@ -176,8 +176,7 @@ public class GSystemEntry {
 					lock.lock(SystemConf.getInstance().localIP);
 				}
 				SystemConf.getInstance().serviceThread = new Thread(
-						new GMaster(lock, InetAddress.getLocalHost()
-								.getHostAddress()));
+						new GMaster(lock, Net_Utilities.obtainLocalIP()));
 				SystemConf.getInstance().serviceThread.start();
 
 			} else {
@@ -202,8 +201,7 @@ public class GSystemEntry {
 						lock.lock(SystemConf.getInstance().localIP);
 					}
 					SystemConf.getInstance().serviceThread = new Thread(
-							new GServer(lock, InetAddress.getLocalHost()
-									.getHostAddress()));
+							new GServer(lock, Net_Utilities.obtainLocalIP()));
 					SystemConf.getInstance().serviceThread.start();
 				}
 			}

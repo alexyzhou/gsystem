@@ -12,6 +12,7 @@ import org.apache.hadoop.ipc.RPC;
 
 import rpc.GMasterProtocol;
 import rpc.GServerProtocol;
+import utilities.Net_Utilities;
 
 public class StopService {
 	
@@ -26,8 +27,7 @@ public class StopService {
 			
 			//String masterIP = prop.getProperty(MASTER_IP);
 			
-			InetAddress addr = InetAddress.getLocalHost();
-			SystemConf.getInstance().localIP = addr.getHostAddress();
+			SystemConf.getInstance().localIP = Net_Utilities.obtainLocalIP();
 			
 			InetSocketAddress address;
 			
