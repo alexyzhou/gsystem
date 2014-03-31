@@ -1,7 +1,6 @@
 package main;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.hadoop.io.LongWritable;
@@ -13,7 +12,7 @@ import rpc.GServerProtocol;
 import rpc.RpcIOCommons;
 import system.SystemConf;
 import system.error.ErrorCode;
-import data.io.DS_DataType;
+import test.TestVariables;
 import data.io.DataPointers_Entity;
 import data.io.DataPointers_Entity._DSInfo;
 import data.io.EdgeInfo;
@@ -24,8 +23,7 @@ import data.writable.EdgeCollectionWritable;
 
 public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 
-	private static String DATASET_ID = "out_senderid_sorted";
-	private static String DATASCHEMA_ID = "DS0001";
+	
 
 	protected static HashMap<String, String> vertexLink1 = new HashMap<>();
 	protected static HashMap<String, String> vertexLink2 = new HashMap<>();
@@ -34,9 +32,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 	protected static Graph_Schema vertexSchema;
 	protected static Graph_Schema edgeSchema;
 
-	private static String GRAPH_ID = "Graph0001";
-	private static String VERTEXSCHEMA_ID = "GSV0001";
-	private static String EDGESCHEMA_ID = "GSE0001";
+	
 	
 	private static Text vertexText = new Text("v");
 	private static Text edgeText = new Text("e");
@@ -67,11 +63,10 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 		edgeLink.put("fraud_flag", "fraud_flag");
 		edgeLink.put("creditCard_id", "creditcard_id");
 
-		vertexSchema = get_VertexSchema();
-		edgeSchema = get_EdgeSchema();
+		vertexSchema = TestVariables.get_VertexSchema();
+		edgeSchema = TestVariables.get_EdgeSchema();
 		
 		SystemConf.getInstance().masterIP = context.getConfiguration().get("GNMasterIP");
-		DATASET_ID = context.getConfiguration().get("GNDSID");
 		
 	}
 
@@ -86,12 +81,12 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 			// First Vertex
 			VertexInfo vf = new VertexInfo();
 			vf.setId(values[1]);
-			vf.setSchema_id(VERTEXSCHEMA_ID);
-			vf.setGraph_id(GRAPH_ID);
+			vf.setSchema_id(TestVariables.VERTEXSCHEMA_ID);
+			vf.setGraph_id(TestVariables.GRAPH_ID);
 
 			DataPointers_Entity dp = new DataPointers_Entity();
 			for (Attribute attr : vertexSchema.getAttributes()) {
-				_DSInfo dsi = new _DSInfo(DATASET_ID, DATASCHEMA_ID, key.get(),
+				_DSInfo dsi = new _DSInfo(TestVariables.DATASET_ID, TestVariables.DATASCHEMA_ID, key.get(),
 						vertexLink1.get(attr.name));
 				dp.data.put(attr.name, dsi);
 			}
@@ -100,11 +95,11 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 			// Second Vertex
 			VertexInfo vse = new VertexInfo();
 			vse.setId(values[5]);
-			vse.setSchema_id(VERTEXSCHEMA_ID);
-			vse.setGraph_id(GRAPH_ID);
+			vse.setSchema_id(TestVariables.VERTEXSCHEMA_ID);
+			vse.setGraph_id(TestVariables.GRAPH_ID);
 			DataPointers_Entity dp2 = new DataPointers_Entity();
 			for (Attribute attr : vertexSchema.getAttributes()) {
-				_DSInfo dsi = new _DSInfo(DATASET_ID, DATASCHEMA_ID, key.get(),
+				_DSInfo dsi = new _DSInfo(TestVariables.DATASET_ID, TestVariables.DATASCHEMA_ID, key.get(),
 						vertexLink2.get(attr.name));
 				dp2.data.put(attr.name, dsi);
 			}
@@ -113,12 +108,12 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 			// Edge
 			EdgeInfo ei = new EdgeInfo();
 			ei.setId(values[0]);
-			ei.setSchema_id(EDGESCHEMA_ID);
+			ei.setSchema_id(TestVariables.EDGESCHEMA_ID);
 			ei.setSource_vertex_id(values[1]);
-			ei.setTarget_vertex_id(values[2]);
+			ei.setTarget_vertex_id(values[5]);
 			DataPointers_Entity dpe = new DataPointers_Entity();
 			for (Attribute attr : edgeSchema.getAttributes()) {
-				_DSInfo dsi = new _DSInfo(DATASET_ID, DATASCHEMA_ID, key.get(), edgeLink.get(attr.name));
+				_DSInfo dsi = new _DSInfo(TestVariables.DATASET_ID, TestVariables.DATASCHEMA_ID, key.get(), edgeLink.get(attr.name));
 				dpe.data.put(attr.name, dsi);
 			}
 			ei.setPointer_List(dpe);
@@ -140,7 +135,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 		GMasterProtocol mProtocol = RpcIOCommons.getMasterProxy();
 		
 		String resultIP = mProtocol.findTargetGServer_Store(v);
-		if (!(resultIP.equals(ErrorCode.VERTEX_ALREADYEXIST) || resultIP.equals(""))) {
+		if (!(resultIP == null || resultIP.equals(ErrorCode.VERTEX_ALREADYEXIST) || resultIP.equals(""))) {
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(resultIP);
 			gsProtocol.storeVertex(v, new EdgeCollectionWritable());
@@ -160,7 +155,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 		GMasterProtocol mProtocol = RpcIOCommons.getMasterProxy();
 		String resultIP = mProtocol.findTargetGServer_StoreEdge(e);
 		
-		if (!(resultIP.equals(ErrorCode.EDGE_ALREADYEXIST) || resultIP.equals(""))) {
+		if (!(resultIP == null || resultIP.equals(ErrorCode.EDGE_ALREADYEXIST) || resultIP.equals(""))) {
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(resultIP);
 			gsProtocol.storeEdge(e);
@@ -174,43 +169,6 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 		}
 	}
 
-	protected static Graph_Schema get_VertexSchema() {
-		Graph_Schema vertexSchema = new Graph_Schema();
-		vertexSchema.setsId(VERTEXSCHEMA_ID);
-		ArrayList<Attribute> vertexAttributes = new ArrayList<Attribute>();
-		vertexAttributes.add(vertexSchema.new Attribute("id",
-				DS_DataType.integer));
-		vertexAttributes.add(vertexSchema.new Attribute("restricted",
-				DS_DataType.bool));
-		vertexAttributes.add(vertexSchema.new Attribute("creation_time",
-				DS_DataType.integer));
-		vertexAttributes.add(vertexSchema.new Attribute("email_domain",
-				DS_DataType.string));
-		vertexSchema.setAttributes(vertexAttributes);
-		return vertexSchema;
-	}
-
-	protected static Graph_Schema get_EdgeSchema() {
-		Graph_Schema edgeSchema = new Graph_Schema();
-		edgeSchema.setsId(EDGESCHEMA_ID);
-		ArrayList<Attribute> edgeAttributes = new ArrayList<Attribute>();
-		edgeAttributes.add(edgeSchema.new Attribute("id", DS_DataType.integer));
-		edgeAttributes.add(edgeSchema.new Attribute("toVertex",
-				DS_DataType.integer));
-		edgeAttributes.add(edgeSchema.new Attribute("creation_time",
-				DS_DataType.integer));
-		edgeAttributes.add(edgeSchema.new Attribute("sender_ip",
-				DS_DataType.integer));
-		edgeAttributes.add(edgeSchema.new Attribute("receiver_ip",
-				DS_DataType.integer));
-		edgeAttributes.add(edgeSchema.new Attribute("tran_amount",
-				DS_DataType.floats));
-		edgeAttributes.add(edgeSchema.new Attribute("fraud_flag",
-				DS_DataType.bool));
-		edgeAttributes.add(edgeSchema.new Attribute("creditCard_id",
-				DS_DataType.integer));
-		edgeSchema.setAttributes(edgeAttributes);
-		return edgeSchema;
-	}
+	
 
 }
