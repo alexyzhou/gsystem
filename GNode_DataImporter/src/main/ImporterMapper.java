@@ -69,6 +69,18 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 		SystemConf.getInstance().masterIP = context.getConfiguration().get("GNMasterIP");
 		
 	}
+	
+	
+
+	@Override
+	protected void cleanup(Context context) throws IOException,
+			InterruptedException {
+		super.cleanup(context);
+		
+		RpcIOCommons.stop();
+	}
+
+
 
 	@Override
 	protected void map(LongWritable key, Text value,
@@ -125,7 +137,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 			} catch (IOException e) {
 				System.err.println(e.getLocalizedMessage());
 			}
-
+			
 		}
 		
 		
