@@ -110,7 +110,7 @@ public class GTest33114 {
 		return true;
 	}
 	
-	protected static String traverseGraph_Test() {
+	protected static void traverseGraph_Test() {
 		// BFS
 		System.out.println("Now try to traverse graph!");
 		String nodeID = "100001";
@@ -119,15 +119,24 @@ public class GTest33114 {
 			
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(TestVariables.TARGET_IP);
-			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.BFS, 3);
-			String result = gsProtocol.traverseGraph_Sync(nodeID, param).toString();
-			System.out.println("traverse graph succeed!");
-			return result;
+			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10);
+			
+			String targetNode = gsProtocol.queryVertexToServer(nodeID);
+			
+			if (targetNode != null) {
+				if (!targetNode.equals(TestVariables.TARGET_IP)) {
+					GServerProtocol gServerPro = RpcIOCommons
+							.getGServerProtocol(targetNode);
+					gServerPro.traverseGraph_Async(nodeID, param);
+				} else {
+					gsProtocol.traverseGraph_Async(nodeID, param);
+				}
+				System.out.println("traverse graph succeed!");
+			}
+			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
-			System.out.println("insert graphSchema failed!");
-			return "";
+			System.out.println("traverse graph failed!");
 		}
 
 	}
@@ -135,7 +144,7 @@ public class GTest33114 {
 	protected static boolean queryGraph_Test() {
 		System.out.println("Now try to query Graph!");
 
-		String vertexIDToQuery = "100001";
+		String vertexIDToQuery = "100006";
 		String gServerIP = TestVariables.TARGET_IP;
 
 		try {
@@ -143,6 +152,7 @@ public class GTest33114 {
 			//For Vertex
 			GServerProtocol gsProtocol = RpcIOCommons.getGServerProtocol(gServerIP);
 			VertexInfo info = gsProtocol.getVertexInfo(vertexIDToQuery);
+			String target = gsProtocol.queryVertexToServer(vertexIDToQuery);
 			System.err.println(info.getSchema_id());
 			VertexData data = gsProtocol.getVertexData(vertexIDToQuery);
 			System.err.println(data.getData().get("creation_time"));
@@ -163,26 +173,16 @@ public class GTest33114 {
 
 	public static void main(String[] args) {
 		
-//		if (insertDataSet_Test(TestVariables.DATASET_ID, TestVariables.DATASET_PATH)) {
-//			System.out.println("INSERT DATA SUCCEED!");
-//		} else {
-//			System.out.println("INSERT DATA FAILED!");
-//		}
+		//insertDataSet_Test(TestVariables.DATASET_ID, TestVariables.DATASET_PATH);
+		
+//		insertDataSchema_Test()
 //		
-//		if (insertDataSchema_Test()) {
-//			System.out.println("INSERT DATA_Schema SUCCEED!");
-//		} else {
-//			System.out.println("INSERT DATA_Schema FAILED!");
-//		}
-//		
-//		if (insertGraphSchema_Test()) {
-//			System.out.println("INSERT GRAPH_SCHEMA SUCCEED!");
-//		} else {
-//			System.out.println("INSERT GRAPH_SCHEMA FAILED!");
-//		}
+//		insertGraphSchema_Test()
 		
 		//queryGraph_Test();
 		traverseGraph_Test();
+		
+		RpcIOCommons.stop();
 		
 	}
 

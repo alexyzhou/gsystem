@@ -230,4 +230,8 @@ public class RpcIOCommons implements Runnable {
 			}
 		}
 	}
+	
+	public static void stop() {
+		isRunning = false;
+	}
 }

@@ -68,7 +68,7 @@ public class VertexData implements Writable {
 		for (String target : queries.keySet()) {
 			System.out.println("target "+ target);
 			String[] targets = target.split("@");
-			String fsPath = node.getDataSetPath_Remote(targets[0]);
+			String fsPath = node.getDataSetPath(targets[0]);
 			Data_Schema ds = node.getDataSchema(targets[1]);
 			if (fsPath != null && ds != null) {
 				try {

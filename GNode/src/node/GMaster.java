@@ -19,6 +19,7 @@ import rpc.RpcIOCommons;
 import system.SystemConf;
 import system.error.ErrorCode;
 import test.Debug;
+import utilities.Log_Utilities;
 import zk.Lock;
 import zk.LockFactory;
 import zk.ZkObtainer;
@@ -220,7 +221,9 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	protected void removeDeadServer(GServerInfo ip) {
 		// TO DO
-		System.out.println("[MASTER] removeDeadServer Called!");
+		if (Debug.printDetailedLog) {
+			Log_Utilities.genGMasterLog(Log_Utilities.LOG_HEADER_DEBUG, "removeDeadServer, ip="+ip.ip);
+		}
 		synchronized (gServerList) {
 			Set<GServerInfo> keys = gServerList.keySet();
 			for (GServerInfo info : keys) {
@@ -510,6 +513,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			array.remove(targerGSInfo);
 			array.add(new GServerInfo(source_ip));
 			targerGSInfo.isIndexServer = true;
+			gServerList.remove(new GServerInfo(source_ip));
 			gServerList.put(targerGSInfo, array);
 			// for index server
 			GServerProtocol proxy;

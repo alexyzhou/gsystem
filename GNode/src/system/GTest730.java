@@ -305,7 +305,7 @@ public class GTest730 {
 		
 		try {
 			gsProtocol = RpcIOCommons.getGServerProtocol("10.60.0.223");
-			VertexInfo info = gsProtocol.getVertexInfo_Remote(vertexIDToQuery);
+			VertexInfo info = gsProtocol.getVertexInfo(vertexIDToQuery);
 			System.err.println(info.getSchema_id());
 			VertexData data = gsProtocol.getVertexData(vertexIDToQuery);
 			System.err.println(data.getData().get("creation_time"));

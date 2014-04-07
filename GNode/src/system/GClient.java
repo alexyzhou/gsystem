@@ -201,7 +201,7 @@ public class GClient {
 		
 		String vertexIDtoDelete = "v101";
 		protocol = gSProtocols.get("10.60.0.223");
-		System.out.println("[Client] Data Deletion " + protocol.removeVertex_Remote(vertexIDtoDelete) + "Successfully");
+		System.out.println("[Client] Data Deletion " + protocol.removeVertex(vertexIDtoDelete) + "Successfully");
 		
 		System.out.println("[Client]" + SystemConf.getTime()
 				+ "Data Deletion FINISHED!");

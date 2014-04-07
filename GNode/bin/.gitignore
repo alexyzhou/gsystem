@@ -1,8 +1,6 @@
 /data
 /ds
 /node
-/utilities
-/system
-/zk
-/.svn
 /test
+/rpc
+/system

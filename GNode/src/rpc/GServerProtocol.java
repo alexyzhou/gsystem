@@ -1,10 +1,6 @@
 package rpc;
 
-import java.util.UUID;
-
-import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
 import data.io.Data_Schema;
@@ -17,6 +13,8 @@ import data.writable.BPlusTreeStrStrWritable;
 import data.writable.EdgeCollectionWritable;
 import data.writable.StringMapWritable;
 import data.writable.TraverseJobParameters;
+import data.writable.TraverseJobValuePairWritable;
+import data.writable.UUIDWritable;
 import data.writable.VertexCollectionWritable;
 import ds.index.BinarySearchStringIndex;
 
@@ -34,25 +32,19 @@ public interface GServerProtocol extends VersionedProtocol {
 		public float getMarkForTargetVertex(VertexInfo info);
 		//update
 		public boolean updateVertexInfo(VertexInfo info);
-		public boolean updateVertexInfo_Remote(VertexInfo info);
 		//remove
 		public boolean removeVertex(String id);
-		public boolean removeVertex_Remote(String id);
 		public boolean removeEdge(String id, String source_vertex_id);
-		public boolean removeEdge_Remote(String id, String source_vertex_id);
 		//query
 		public VertexInfo getVertexInfo(String id);
-		public VertexInfo getVertexInfo_Remote(String id);
 		public VertexData getVertexData(String id);
 		public EdgeInfo getEdgeInfo(String id);
 		public EdgeData getEdgeData(String id);
 		//query graph
 		public void traverseGraph_Async(String starting_v_id, TraverseJobParameters param);
-		public Text traverseGraph_Sync(String starting_v_id, TraverseJobParameters param);
 			//private methods
-			public void traverseGraph_Remote_Async(ArrayWritable array, TraverseJobParameters param, IntWritable currentLevel, String parentIP, UUID parentJobID);
-			public Text traverseGraph_Remote_Sync(ArrayWritable array, TraverseJobParameters param, IntWritable currentLevel);
-			public void traverseGraph_NotifyFinish(String result, UUID jobID);
+			public void traverseGraph_Remote_Async(TraverseJobValuePairWritable[] array, TraverseJobParameters param, IntWritable currentLevel, String parentIP, UUIDWritable parentJobID);
+			public void traverseGraph_NotifyFinish(TraverseJobValuePairWritable[] result, UUIDWritable jobID);
 
 	//Graph Index
 		
@@ -94,7 +86,6 @@ public interface GServerProtocol extends VersionedProtocol {
 		public boolean removeDataSet_Sync(String dsID);
 		//query
 		public String getDataSetPath(String dsID);
-		public String getDataSetPath_Remote(String dsID);
 		
 	// DataSet Index
 		

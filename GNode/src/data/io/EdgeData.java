@@ -61,7 +61,7 @@ public class EdgeData implements Writable {
 		}
 		for (String target : queries.keySet()) {
 			String[] targets = target.split("@");
-			String fsPath = node.getDataSetPath_Remote(targets[0]);
+			String fsPath = node.getDataSetPath(targets[0]);
 			Data_Schema ds = node.getDataSchema(targets[1]);
 			if (fsPath != null && ds != null) {
 				try {

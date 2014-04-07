@@ -13,17 +13,17 @@ public class TraverseJobParameters implements Writable {
 		BFS,
 		DFS
 	}
-	public UUID jobID;
+	public UUIDWritable jobID;
 	public TraversalMethod method;
 	public int maxdepth;
 	
 	public TraverseJobParameters() {
-		jobID = null;
+		jobID = new UUIDWritable();
 	}
 
 	public TraverseJobParameters(UUID jobID, TraversalMethod method,
 			int maxdepth) {
-		this.jobID = jobID;
+		this.jobID = new UUIDWritable(jobID);
 		this.method = method;
 		this.maxdepth = maxdepth;
 	}
@@ -31,8 +31,7 @@ public class TraverseJobParameters implements Writable {
 
 	@Override
 	public void readFields(DataInput input) throws IOException {
-		
-		jobID = UUID.fromString(input.readUTF());
+		jobID.readFields(input);
 		switch (input.readInt()) {
 		case 0:
 			//BFS
@@ -52,7 +51,7 @@ public class TraverseJobParameters implements Writable {
 	@Override
 	public void write(DataOutput output) throws IOException {
 		// TODO Auto-generated method stub
-		output.writeUTF(jobID.toString());
+		jobID.write(output);
 		switch (method) {
 		case BFS:
 			output.writeInt(0);
