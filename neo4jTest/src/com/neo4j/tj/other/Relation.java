@@ -1,4 +1,4 @@
-package myCode;
+package com.neo4j.tj.other;
 
 public class Relation {
 	public static final String OUT = "out";

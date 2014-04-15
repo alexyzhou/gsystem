@@ -1,4 +1,4 @@
-package myCode;
+package com.neo4j.tj.other;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,6 +6,7 @@ import java.util.List;
 
 public class TraversalDefinition {
 	public static final String DEPTH_FIRST = "depth first";
+	public static final String BREADTH_FIRST = "breadth_first";
 	public static final String NODE = "node";
 	public static final String ALL = "all";
 

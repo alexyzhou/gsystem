@@ -1,4 +1,4 @@
-package myCode;
+package com.neo4j.tj.other;
 
 import java.net.URI;
 import java.net.URISyntaxException;
