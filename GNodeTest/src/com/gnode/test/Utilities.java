@@ -150,8 +150,8 @@ public class Utilities {
 			
 			//For Vertex
 			GServerProtocol gsProtocol = RpcIOCommons.getGServerProtocol(gServerIP);
-			VertexInfo info = gsProtocol.getVertexInfo(vertexIDToQuery);
-			System.err.println(info.getSchema_id());
+			//VertexInfo info = gsProtocol.getVertexInfo(vertexIDToQuery);
+			//System.err.println(info.getSchema_id());
 			VertexData data = gsProtocol.getVertexData(vertexIDToQuery);
 			System.err.println(data.getData().get("creation_time"));
 			

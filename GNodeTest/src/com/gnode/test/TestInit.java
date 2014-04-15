@@ -2,7 +2,7 @@ package com.gnode.test;
 
 import rpc.RpcIOCommons;
 
-public class TestEnvInit {
+public class TestInit {
 
 	public static void main(String[] args) {
 		
