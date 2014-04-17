@@ -16,16 +16,18 @@ public class TraverseJobParameters implements Writable {
 	public UUIDWritable jobID;
 	public TraversalMethod method;
 	public int maxdepth;
+	public long beginTime;
 	
 	public TraverseJobParameters() {
 		jobID = new UUIDWritable();
 	}
 
 	public TraverseJobParameters(UUID jobID, TraversalMethod method,
-			int maxdepth) {
+			int maxdepth, long beginTime) {
 		this.jobID = new UUIDWritable(jobID);
 		this.method = method;
 		this.maxdepth = maxdepth;
+		this.beginTime = beginTime;
 	}
 
 
@@ -46,6 +48,7 @@ public class TraverseJobParameters implements Writable {
 			break;
 		}
 		maxdepth = input.readInt();
+		beginTime = input.readLong();
 	}
 
 	@Override
@@ -64,6 +67,7 @@ public class TraverseJobParameters implements Writable {
 			break;
 		}
 		output.writeInt(maxdepth);
+		output.writeLong(beginTime);
 	}
 
 }

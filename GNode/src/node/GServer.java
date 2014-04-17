@@ -1490,6 +1490,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					Log_Utilities.genGServerLog(Log_Utilities.LOG_HEADER_DEBUG,
 							"TraverseGraphAsync Run Entered! StartingVID="+starting_v_id);
 				}
+				param.beginTime = new Date().getTime();
 				
 				UUID rootJobID = UUID.randomUUID();
 
@@ -2028,6 +2029,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					System.out.println("[" + SystemConf.getTime()
 							+ "][gSERVER][Graph Traversal] Result: "
 							+ tempResult.genResultString());
+					System.out.println("[" + SystemConf.getTime()
+							+ "][gSERVER][Graph Traversal] [********TimeCost(ms)********]: "
+							+ ((new Date().getTime()) - tempResult.param.beginTime));
 				}
 				
 				traversalResult

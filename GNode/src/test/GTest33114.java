@@ -2,12 +2,11 @@ package test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.UUID;
 
-import rpc.GMasterProtocol;
 import rpc.GServerProtocol;
 import rpc.RpcIOCommons;
-import system.SystemConf;
 import data.io.DS_DataType;
 import data.io.Data_Schema;
 import data.io.Graph_Schema;
@@ -119,7 +118,7 @@ public class GTest33114 {
 			
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(TestVariables.TARGET_IP);
-			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10);
+			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10, (new Date()).getTime());
 			
 			String targetNode = gsProtocol.queryVertexToServer(nodeID);
 			
