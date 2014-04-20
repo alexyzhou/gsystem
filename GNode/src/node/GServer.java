@@ -3,6 +3,7 @@ package node;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -14,10 +15,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.log4j.spi.ErrorCode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -132,7 +131,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				SystemConf.getInstance().gServer_graph_rBuffer_edge_size);
 
 		vGlobalIndexTree = null;
-		eGlobalIndexTree = null;
+		// eGlobalIndexTree = null;
 
 		vLocalIndexTree = new BPlusTree<String, String>(
 				SystemConf.getInstance().gServer_graph_index_local_size);
@@ -201,7 +200,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	protected LRULinkedHashMap<String, EdgeData> eBufferPool_rD;
 
 	protected BPlusTree<String, String> vGlobalIndexTree;
-	protected BPlusTree<String, String> eGlobalIndexTree;
+	// protected BPlusTree<String, String> eGlobalIndexTree;
 
 	protected BPlusTree<String, String> vLocalIndexTree;
 	protected BPlusTree<String, String> eLocalIndexTree;
@@ -226,26 +225,12 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	protected String hdfs_basePath_edge;
 
 	// Write
-	protected void writeVertex(VertexInfo data) throws IOException {
-		if (vBufferPool_w.size() == SystemConf.getInstance().gServer_graph_wBuffer_vertex_size) {
-			flushToLocal(vBufferPool_w, GP_DataType.Vertex);
-		}
-		vBufferPool_w.add(data);
-		vCount++;
-	}
-
-	protected void writeEdge(EdgeInfo data) throws IOException {
-		if (eBufferPool_w.size() == SystemConf.getInstance().gServer_graph_wBuffer_edge_size) {
-			flushToLocal(eBufferPool_w, GP_DataType.Edge);
-		}
-		eBufferPool_w.add(data);
-		eCount++;
-	}
 
 	private void flushToLocal(Collection<?> coll, GP_DataType type)
 			throws IOException {
 		switch (type) {
 		case Vertex:
+			// if (Debug.printDetailedLog)
 			System.out.println("[" + SystemConf.getTime()
 					+ "][gSERVER] Begin to FlushVertex!");
 			String retPath_v = HDFS_Utilities.getInstance()
@@ -260,6 +245,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			coll.clear();
 			break;
 		case Edge:
+			// if (Debug.printDetailedLog)
 			System.out.println("[" + SystemConf.getTime()
 					+ "][gSERVER] Begin to FlushEdge!");
 			String retPath_e = HDFS_Utilities.getInstance().flushObjectToHDFS(
@@ -276,6 +262,44 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}
 	}
 
+	protected void insertEdgeToVertex(EdgeInfo edata) {
+		// Now deal with Vertex
+		VertexInfo vi = getVertexInfo(edata.getSource_vertex_id());
+		if (vi != null) {
+			vi.getEdge_List().add(
+					new _EdgeInfo(edata.getId(), edata.getTarget_vertex_id()));
+			updateVertexInfo(vi);
+		}
+	}
+
+	protected void insertEdgeListToVertex(String vid, ArrayList<EdgeInfo> eArr) {
+		// Now deal with Vertex
+		VertexInfo vi = getVertexInfo(vid);
+		if (vi != null) {
+			for (EdgeInfo ei : eArr) {
+				vi.getEdge_List().add(
+						new _EdgeInfo(ei.getId(), ei.getTarget_vertex_id()));
+			}
+			updateVertexInfo(vi);
+		}
+	}
+
+	protected void writeVertex(VertexInfo data) throws IOException {
+		if (vBufferPool_w.size() == SystemConf.getInstance().gServer_graph_wBuffer_vertex_size) {
+			flushToLocal(vBufferPool_w, GP_DataType.Vertex);
+		}
+		vBufferPool_w.add(data);
+		vCount++;
+	}
+
+	protected void writeEdge(EdgeInfo data) throws IOException {
+		if (eBufferPool_w.size() == SystemConf.getInstance().gServer_graph_wBuffer_edge_size) {
+			flushToLocal(eBufferPool_w, GP_DataType.Edge);
+		}
+		eBufferPool_w.add(data);
+		eCount++;
+	}
+
 	// End of Write
 
 	// Read
@@ -287,8 +311,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			for (VertexInfo info : vBufferPool_w) {
 				if (info.getId().equals(id)) {
 					hitiInfo = info;
-					System.out.println("[" + SystemConf.getTime()
-							+ "][gSERVER] Query W Cache Hit!");
+					if (Debug.printDetailedLog)
+						System.out.println("[" + SystemConf.getTime()
+								+ "][gSERVER] Query W Cache Hit!");
 					break;
 				}
 			}
@@ -302,8 +327,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					for (VertexInfo info : data) {
 						if (info.getId().equals(id)) {
 							hitiInfo = info;
-							System.out.println("[" + SystemConf.getTime()
-									+ "][gSERVER] HDFS Hit!");
+							if (Debug.printDetailedLog)
+								System.out.println("[" + SystemConf.getTime()
+										+ "][gSERVER] HDFS Hit!");
 							break;
 						}
 
@@ -311,8 +337,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				}
 			}
 		} else {
-			System.out.println("[" + SystemConf.getTime()
-					+ "][gSERVER] Query R Cache Hit!");
+			if (Debug.printDetailedLog)
+				System.out.println("[" + SystemConf.getTime()
+						+ "][gSERVER] Query R Cache Hit!");
 			hitiInfo = cache;
 		}
 		// Update Read Buffer Pool
@@ -331,15 +358,18 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				return null;
 			}
 			VertexData data = new VertexData();
-			System.out.println("readVertexData begin init");
+			if (Debug.printDetailedLog)
+				System.out.println("readVertexData begin init");
 			data.initWithInfo(info);
 			data.setSchema(readSchema(info.getGraph_id(), info.getSchema_id()));
 			if (data.getSchema() != null) {
-				System.out.println("readVertexData schema read finished");
+				if (Debug.printDetailedLog)
+					System.out.println("readVertexData schema read finished");
 			}
 
 			data.readData(this);
-			System.out.println("dataRead finished");
+			if (Debug.printDetailedLog)
+				System.out.println("dataRead finished");
 			vBufferPool_rD.put(id, data);
 			return data;
 		} else {
@@ -402,6 +432,213 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}
 	}
 
+	protected Graph_Schema readSchema(String graph_id, String schema_id) {
+		GraphSchemaCollectionSerializable gsc = schema_cache.get(graph_id);
+		if (gsc == null) {
+			// will read file from zookeeper
+			try {
+				org.apache.zookeeper.data.Stat stat = zooKeeper.exists(
+						SystemConf.getInstance().zoo_basePath_gSchema + "/"
+								+ graph_id, null);
+				if (stat != null) {
+					gsc = (GraphSchemaCollectionSerializable) ZkIOCommons
+							.unserialize(zooKeeper.getData(
+									SystemConf.getInstance().zoo_basePath_gSchema
+											+ "/" + graph_id, zooWatcher, stat));
+					if (gsc != null) {
+						if (Debug.printDetailedLog)
+							System.out.println("ZK Read Succeed!");
+						schema_cache.put(graph_id, gsc);
+						return gsc.schemas.get(schema_id);
+					}
+				}
+			} catch (KeeperException | InterruptedException e) {
+				e.printStackTrace();
+				return null;
+			}
+			return null;
+		} else {
+			return gsc.schemas.get(schema_id);
+		}
+	}
+
+	protected String readDataSetPath(String dsID) {
+		if (SystemConf.getInstance().isIndexServer == true) {
+			return dsPathIndex.get(dsID);
+		} else {
+			return null;
+		}
+	}
+
+	protected boolean removeEdge_private(String id) {
+		if (EdgeExist(id)) {
+			if (eBufferPool_r.get(id) != null) {
+				eBufferPool_r.remove(id);
+			}
+			for (EdgeInfo info : eBufferPool_w) {
+				if (info.getId().equals(id)) {
+					vBufferPool_w.remove(info);
+					// try {
+					// GMasterProtocol gm;
+					// gm = RpcIOCommons.getMasterProxy();
+					// gm.removeEdgeFromIndex(id);
+					// } catch (IOException e) {
+					//
+					// e.printStackTrace();
+					// }
+					return true;
+				}
+			}
+			if (eLocalIndexTree.get(id) != null) {
+				String filePath = eLocalIndexTree.get(id);
+				if (filePath != null) {
+					EdgeCollectionWritable ew;
+					try {
+						ew = (EdgeCollectionWritable) (HDFS_Utilities
+								.getInstance().readFileToObject(filePath));
+						LinkedList<EdgeInfo> data = (LinkedList<EdgeInfo>) ew.coll;
+						for (EdgeInfo info : data) {
+							if (!info.getId().equals(id)) {
+								writeEdge(info);
+							} else {
+							}
+						}
+						eLocalIndexTree.remove(id);
+						HDFS_Utilities.getInstance().deleteFile(filePath);
+						// GMasterProtocol gm;
+						// gm = RpcIOCommons.getMasterProxy();
+						// gm.removeEdgeFromIndex(id);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
+	protected boolean removeVertex_local(String id) {
+		if (VertexExist(id)) {
+			if (vBufferPool_r.get(id) != null) {
+				vBufferPool_r.remove(id);
+			}
+			for (VertexInfo info : vBufferPool_w) {
+				if (info.getId().equals(id)) {
+					for (_EdgeInfo ei : info.getEdge_List()) {
+						removeEdge_private(ei.id);
+					}
+					vBufferPool_w.remove(info);
+					try {
+						GMasterProtocol gm;
+						gm = RpcIOCommons.getMasterProxy();
+						gm.removeVertexFromIndex(id);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+					return true;
+				}
+			}
+			if (vLocalIndexTree.get(id) != null) {
+				String filePath = vLocalIndexTree.get(id);
+				if (filePath != null) {
+					VertexCollectionWritable cw;
+					try {
+						cw = (VertexCollectionWritable) (HDFS_Utilities
+								.getInstance().readFileToObject(filePath));
+						LinkedList<VertexInfo> data = (LinkedList<VertexInfo>) cw.coll;
+						for (VertexInfo info : data) {
+							if (!info.getId().equals(id)) {
+								writeVertex(info);
+							} else {
+								for (_EdgeInfo ei : info.getEdge_List()) {
+									// remove all the edges
+									removeEdge_private(ei.id);
+								}
+							}
+						}
+						vLocalIndexTree.remove(id);
+						HDFS_Utilities.getInstance().deleteFile(filePath);
+						GMasterProtocol gm;
+						gm = RpcIOCommons.getMasterProxy();
+						gm.removeVertexFromIndex(id);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
+	protected void transformIndexObj(String outputPath, String dsID,
+			String dschemaID, String attriName) {
+		// Transform the index into an Object
+		// TODO ...
+		BinarySearchStringIndex bsi;
+		try {
+			bsi = HDFS_Utilities.getInstance().createBSIndex(
+					outputPath + "/part-r-00000", dsID, dschemaID, attriName);
+			dsBufferPool_index.put(BinarySearchStringIndex.getFileName(dsID,
+					dschemaID, attriName), bsi);
+			HDFS_Utilities.getInstance().flushObjectToHDFS(
+					SystemConf.getInstance().hdfs_basePath_data_index,
+					BinarySearchStringIndex.getFileName(dsID, dschemaID,
+							attriName), bsi);
+			HDFS_Utilities.getInstance().removeFolder_Recursive(outputPath);
+			if (Debug.printDetailedLog)
+				System.out.println("Finished!");
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		}
+	}
+
+	protected boolean updateVertexInfo_local(VertexInfo info) {
+		if (VertexExist(info.getId())) {
+			vBufferPool_r.put(info.getId(), info);
+			for (VertexInfo vi : vBufferPool_w) {
+				if (vi.getId().equals(info.getId())) {
+					vBufferPool_w.remove(vi);
+					vBufferPool_w.add(info);
+					return true;
+				}
+			}
+			if (vLocalIndexTree.get(info.getId()) != null) {
+				String filePath = vLocalIndexTree.get(info.getId());
+				if (filePath != null) {
+					VertexCollectionWritable cw;
+					try {
+						cw = (VertexCollectionWritable) (HDFS_Utilities
+								.getInstance().readFileToObject(filePath));
+						LinkedList<VertexInfo> data = (LinkedList<VertexInfo>) cw.coll;
+						VertexInfo target = null;
+						for (VertexInfo vi : data) {
+							if (vi.getId().equals(info.getId())) {
+								target = vi;
+								break;
+							}
+						}
+						data.remove(target);
+						data.add(info);
+
+						flushToLocal(data, GP_DataType.Vertex);
+						HDFS_Utilities.getInstance().deleteFile(filePath);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
 	protected boolean VertexExist(String id) {
 		if (vBufferPool_r.get(id) == null) {
 			if (vLocalIndexTree.get(id) == null) {
@@ -418,7 +655,76 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}
 	}
 
-	protected boolean EdgeExist(String id) {
+	@Override
+	public void announceIndexServer(String ip) {
+
+		System.out.println("Index Server GET" + ip);
+		SystemConf.getInstance().isIndexServer = false;
+		SystemConf.getInstance().indexServerIP = ip;
+		vGlobalIndexTree = null;
+		// eGlobalIndexTree = null;
+		this.dsPathIndex = null;
+	}
+
+	@Override
+	public void assignIndexServer(BPlusTreeStrStrWritable vertexIndex,
+			BPlusTreeStrStrWritable dsPathIndex) {
+
+		System.out.println("Index Server Assigned!");
+		SystemConf.getInstance().isIndexServer = true;
+		SystemConf.getInstance().indexServerIP = SystemConf.getInstance().localIP;
+		vGlobalIndexTree = vertexIndex.getData();
+		// eGlobalIndexTree = edgeIndex.getData();
+		this.dsPathIndex = dsPathIndex.getData();
+	}
+
+	@Override
+	public String createDSIndex(final String dsID, final String dschemaID,
+			final String attriName) {
+
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+
+				try {
+					String jarPath = SystemConf.getInstance().gServer_data_index_setup_jarPath;
+					String inputPath = getDataSetPath(dsID);
+					String outputPath = SystemConf.getInstance().hdfs_tempPath_data_index
+							+ "/" + new Date().getTime();
+
+					String sourceIP = SystemConf.getInstance().localIP;
+
+					Process p = Runtime.getRuntime().exec(
+							"hadoop jar " + jarPath + " " + inputPath + " "
+									+ outputPath + " " + dschemaID + " "
+									+ attriName + " " + sourceIP);
+
+					BufferedReader br = new BufferedReader(
+							new InputStreamReader(p.getErrorStream()));
+					String line;
+					while ((line = br.readLine()) != null)
+						System.out.println(line);
+
+					transformIndexObj(outputPath, dsID, dschemaID, attriName);
+
+				} catch (java.io.IOException e) {
+					return;
+				}
+			}
+		}).start();
+
+		return "";
+	}
+
+	@Override
+	public void deleteVertexFromIndex(String vid) {
+
+		vGlobalIndexTree.remove(vid);
+	}
+
+	@Override
+	public boolean EdgeExist(String id) {
 		if (eBufferPool_r.get(id) == null) {
 			if (eLocalIndexTree.get(id) == null) {
 				for (EdgeInfo info : eBufferPool_w) {
@@ -434,85 +740,84 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}
 	}
 
-	protected Graph_Schema readSchema(String graph_id, String schema_id) {
-		GraphSchemaCollectionSerializable gsc = schema_cache.get(graph_id);
-		if (gsc == null) {
-			// will read file from zookeeper
+	@Override
+	public Data_Schema getDataSchema(String dschemaID) {
+		// Cache First
+		if (dsBufferPool_schema.containsKey(dschemaID)) {
+			return dsBufferPool_schema.get(dschemaID);
+		} else {
+			// File file
 			try {
-				org.apache.zookeeper.data.Stat stat = zooKeeper.exists(
-						SystemConf.getInstance().zoo_basePath_gSchema + "/"
-								+ graph_id, null);
+				Stat stat = zooKeeper.exists(
+						SystemConf.getInstance().zoo_basePath_dSchema + "/"
+								+ dschemaID, null);
 				if (stat != null) {
-					gsc = (GraphSchemaCollectionSerializable) ZkIOCommons
+					Data_Schema gsc = (Data_Schema) ZkIOCommons
 							.unserialize(zooKeeper.getData(
-									SystemConf.getInstance().zoo_basePath_gSchema
-											+ "/" + graph_id, zooWatcher, stat));
-					if (gsc != null) {
-						System.out.println("ZK Read Succeed!");
-						schema_cache.put(graph_id, gsc);
-						return gsc.schemas.get(schema_id);
-					}
+									SystemConf.getInstance().zoo_basePath_dSchema
+											+ "/" + dschemaID, zooWatcher, stat));
+					dsBufferPool_schema.put(dschemaID, gsc);
+					return gsc;
+				} else {
+					return null;
 				}
 			} catch (KeeperException | InterruptedException e) {
+
 				e.printStackTrace();
 				return null;
 			}
-			return null;
-		} else {
-			return gsc.schemas.get(schema_id);
 		}
 	}
 
-	// End of Read
+	@Override
+	public String getDataSetPath(String dsID) {
+		if (SystemConf.getInstance().isIndexServer == true) {
+			return readDataSetPath(dsID);
+		} else {
+			if (SystemConf.getInstance().indexServerIP != null) {
+				GServerProtocol proxy;
+				try {
+					proxy = RpcIOCommons.getGServerProtocol(SystemConf
+							.getInstance().indexServerIP);
+					String result = proxy.getDataSetPath(dsID);
+					if (Debug.serverStopProxy)
+						RPC.stopProxy(proxy);
+					return result;
+				} catch (IOException e) {
+
+					e.printStackTrace();
+				}
+			}
+			return null;
+		}
+	}
 
 	@Override
-	public void run() {
-		// Simply output all available gServers
-		try {
-			init();
-		} catch (InterruptedException | KeeperException e) {
-			e.printStackTrace();
-			return;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		isRunning = true;
-		while (isRunning == true) {
-			System.out.println("[" + SystemConf.getTime()
-					+ "][gSERVER] Running");
-			System.out.println("[" + SystemConf.getTime()
-					+ "][gSERVER] gServer IP:" + this.ip);
-			this.fileLock.checkAndRecover();
+	public BinarySearchStringIndex getDSIndex(String dsID, String dschemaID,
+			String attriName) {
+		BinarySearchStringIndex target = dsBufferPool_index
+				.get(BinarySearchStringIndex.getFileName(dsID, dschemaID,
+						attriName));
+		if (target != null) {
+			return target;
+		} else {
+			// Read HDFS file
+			BinarySearchStringIndex obj;
 			try {
-				synchronized (SystemConf.getInstance().isIndexServer) {
-					if (SystemConf.getInstance().isIndexServer == true) {
-						CpuUsage usage = CpuUsage.getUsage();
-						if (usage.cpuUsage > SystemConf.getInstance().gServer_usage_cpu
-								|| usage.memUsage > SystemConf.getInstance().gServer_usage_mem) {
-							try {
-								GMasterProtocol proxy = RpcIOCommons
-										.getMasterProxy();
-								proxy.requestToChangeIndexServer(SystemConf
-										.getInstance().localIP);
-								if (Debug.serverStopProxy)
-									RPC.stopProxy(proxy);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-					}
-				}
-				Thread.sleep(15000);
-			} catch (InterruptedException e) {
+				obj = (BinarySearchStringIndex) HDFS_Utilities
+						.getInstance()
+						.readFileToObject(
+								SystemConf.getInstance().hdfs_basePath_data_index
+										+ "/"
+										+ BinarySearchStringIndex.getFileName(
+												dsID, dschemaID, attriName));
+			} catch (IOException e) {
 
 				e.printStackTrace();
-			} catch (Exception e) {
-
-				e.printStackTrace();
+				return null;
 			}
+			return obj;
 		}
-		// Close Connection
-		rpcServer.stop();
 	}
 
 	@Override
@@ -522,110 +827,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	}
 
 	@Override
-	public String storeVertex(VertexInfo vdata, EdgeCollectionWritable edata) {
-
-		System.out.println("[" + SystemConf.getTime()
-				+ "][gSERVER] RPC Received to StoreVertex!" + vdata.getId());
-		try {
-			GMasterProtocol proxy = RpcIOCommons.getMasterProxy();
-			writeVertex(vdata);
-			if (SystemConf.getInstance().isIndexServer) {
-				vGlobalIndexTree.insertOrUpdate(vdata.getId(),
-						SystemConf.getInstance().localIP);
-			}
-			proxy.insertVertexInfoToIndex(vdata.getId(),
-					SystemConf.getInstance().localIP);
-			for (EdgeInfo info : edata.coll) {
-				writeEdge(info);
-				if (SystemConf.getInstance().isIndexServer) {
-					eGlobalIndexTree.insertOrUpdate(info.getId(),
-							SystemConf.getInstance().localIP);
-				}
-				proxy.insertEdgeInfoToIndex(info.getId(),
-						SystemConf.getInstance().localIP);
-			}
-			if (Debug.serverStopProxy)
-				RPC.stopProxy(proxy);
-			return "";
-		} catch (IOException e) {
-
-			e.printStackTrace();
-			return e.getLocalizedMessage();
-		}
-	}
-
-	@Override
-	public String storeEdge(EdgeInfo edata) {
-		System.out.println("[" + SystemConf.getTime()
-				+ "][gSERVER] RPC Received to StoreEdge!" + edata.getId());
-		try {
-			GMasterProtocol proxy = RpcIOCommons.getMasterProxy();
-
-			writeEdge(edata);
-			if (SystemConf.getInstance().isIndexServer) {
-				eGlobalIndexTree.insertOrUpdate(edata.getId(),
-						SystemConf.getInstance().localIP);
-			}
-			proxy.insertEdgeInfoToIndex(edata.getId(),
-					SystemConf.getInstance().localIP);
-
-			if (Debug.serverStopProxy)
-				RPC.stopProxy(proxy);
-
-			// Now deal with Vertex
-			VertexInfo vi = getVertexInfo(edata.getSource_vertex_id());
-			if (vi != null) {
-				vi.getEdge_List().add(
-						new _EdgeInfo(edata.getId(), edata
-								.getTarget_vertex_id()));
-				updateVertexInfo(vi);
-			}
-
-			return "";
-		} catch (IOException e) {
-
-			e.printStackTrace();
-			return e.getLocalizedMessage();
-		}
-	}
-
-	@Override
-	public String storeVertexList(VertexCollectionWritable vdata,
-			EdgeCollectionWritable edata) {
-
-		try {
-			GMasterProtocol proxy = RpcIOCommons.getMasterProxy();
-			for (VertexInfo v : vdata.coll) {
-				writeVertex(v);
-				if (SystemConf.getInstance().isIndexServer) {
-					vGlobalIndexTree.insertOrUpdate(v.getId(),
-							SystemConf.getInstance().localIP);
-				}
-				proxy.insertVertexInfoToIndex(v.getId(),
-						SystemConf.getInstance().localIP);
-			}
-			for (EdgeInfo e : edata.coll) {
-				writeEdge(e);
-				if (SystemConf.getInstance().isIndexServer) {
-					eGlobalIndexTree.insertOrUpdate(e.getId(),
-							SystemConf.getInstance().localIP);
-				}
-				proxy.insertEdgeInfoToIndex(e.getId(),
-						SystemConf.getInstance().localIP);
-			}
-			if (Debug.serverStopProxy)
-				RPC.stopProxy(proxy);
-			return "";
-		} catch (IOException e) {
-
-			e.printStackTrace();
-			return e.getLocalizedMessage();
-		}
-	}
-	
-	@Override
 	public VertexInfo getVertexInfo(String id) {
-		
+
 		if (VertexExist(id)) {
 			try {
 				return readVertex(id);
@@ -700,68 +903,119 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	}
 
 	@Override
-	public void stopService() {
-
-		isRunning = false;
-	}
-
-	@Override
-	public double reportUsageMark() {
-
-		CpuUsage usage;
-		try {
-			usage = CpuUsage.getUsage();
-			if (usage.cpuUsage < SystemConf.getInstance().gServer_usage_cpu
-					&& usage.memUsage < SystemConf.getInstance().gServer_usage_mem) {
-				return usage.cpuUsage + usage.memUsage;
-			} else {
-				return Double.MAX_VALUE;
-			}
-		} catch (Exception e) {
-
-			e.printStackTrace();
+	public boolean insertOrUpdateDataSchema(String dschemaID, Data_Schema ds) {
+		// Update Cache First
+		if (dsBufferPool_schema.get(dschemaID) != null) {
+			dsBufferPool_schema.put(dschemaID, ds);
 		}
-		return Double.MAX_VALUE;
+		// Update File
+		return ZkIOCommons.setDSSchemaFile(zooKeeper, dschemaID, ds);
+	}
+
+	@Override
+	public boolean insertOrUpdateSchema(String graph_id, Graph_Schema gs) {
+		GraphSchemaCollectionSerializable gsc = schema_cache.get(graph_id);
+		if (gsc == null) {
+			// will read file from zookeeper
+			try {
+				org.apache.zookeeper.data.Stat stat = zooKeeper.exists(
+						SystemConf.getInstance().zoo_basePath_gSchema + "/"
+								+ graph_id, null);
+				if (stat != null) {
+					gsc = (GraphSchemaCollectionSerializable) ZkIOCommons
+							.unserialize(zooKeeper.getData(
+									SystemConf.getInstance().zoo_basePath_gSchema
+											+ "/" + graph_id, zooWatcher, stat));
+					if (gsc != null) {
+						gsc.schemas.put(gs.getsId(), gs);
+						return ZkIOCommons.setSchemaFile(zooKeeper, graph_id,
+								gsc);
+					}
+				} else {
+					gsc = new GraphSchemaCollectionSerializable();
+					gsc.schemas.put(gs.getsId(), gs);
+					return ZkIOCommons.setSchemaFile(zooKeeper, graph_id, gsc);
+				}
+			} catch (KeeperException | InterruptedException e) {
+
+				e.printStackTrace();
+				return false;
+			}
+			return false;
+		} else {
+			gsc.schemas.put(gs.getsId(), gs);
+			return ZkIOCommons.setSchemaFile(zooKeeper, graph_id, gsc);
+		}
+	}
+
+	@Override
+	public boolean insertDataSet(String dsID, String hdfsPath) {
+
+		if (SystemConf.getInstance().isIndexServer) {
+			if (dsPathIndex.get(dsID) != null) {
+				return false;
+			} else {
+				dsPathIndex.insertOrUpdate(dsID, hdfsPath);
+				try {
+					GMasterProtocol proxy;
+					proxy = RpcIOCommons.getMasterProxy();
+					proxy.notifyDataSet_Insert(
+							SystemConf.getInstance().localIP, dsID, hdfsPath);
+					if (Debug.serverStopProxy)
+						RPC.stopProxy(proxy);
+				} catch (IOException e) {
+
+					dsPathIndex.remove(dsID);
+					e.printStackTrace();
+					return false;
+				}
+				return true;
+			}
+		} else {
+			if (SystemConf.getInstance().indexServerIP != null
+					&& !SystemConf.getInstance().indexServerIP.equals("")) {
+				try {
+					GServerProtocol proxy = RpcIOCommons
+							.getGServerProtocol(SystemConf.getInstance().indexServerIP);
+					boolean result = proxy.insertDataSet(dsID, hdfsPath);
+					if (Debug.serverStopProxy)
+						RPC.stopProxy(proxy);
+					return result;
+				} catch (IOException e) {
+					e.printStackTrace();
+					return false;
+				}
+
+			}
+		}
+		return false;
 
 	}
 
 	@Override
-	public void assignIndexServer(BPlusTreeStrStrWritable vertexIndex,
-			BPlusTreeStrStrWritable edgeIndex,
-			BPlusTreeStrStrWritable dsPathIndex) {
-
-		System.out.println("Index Server Assigned!");
-		SystemConf.getInstance().isIndexServer = true;
-		SystemConf.getInstance().indexServerIP = SystemConf.getInstance().localIP;
-		vGlobalIndexTree = vertexIndex.getData();
-		eGlobalIndexTree = edgeIndex.getData();
-		this.dsPathIndex = dsPathIndex.getData();
-	}
-
-	@Override
-	public void announceIndexServer(String ip) {
-
-		System.out.println("Index Server GET" + ip);
-		SystemConf.getInstance().isIndexServer = false;
-		SystemConf.getInstance().indexServerIP = ip;
-		vGlobalIndexTree = null;
-		eGlobalIndexTree = null;
-		this.dsPathIndex = null;
+	public boolean insertDataSet_Sync(String dsID, String hdfsPath) {
+		if (dsPathIndex.get(dsID) != null) {
+			return false;
+		} else {
+			dsPathIndex.insertOrUpdate(dsID, hdfsPath);
+			return true;
+		}
 	}
 
 	@Override
 	public void putVertexInfoToIndex(String vid, String targetIP) {
-		System.out.println("[" + SystemConf.getTime()
-				+ "][gSERVER] vGlobalIndexTree Update! - " + vid + " - "
-				+ targetIP);
+		if (Debug.printDetailedLog)
+			System.out.println("[" + SystemConf.getTime()
+					+ "][gSERVER] vGlobalIndexTree Update! - " + vid + " - "
+					+ targetIP);
 		vGlobalIndexTree.insertOrUpdate(vid, targetIP);
 	}
 
-	@Override
-	public void putEdgeInfoToIndex(String eid, String targetIP) {
-
-		eGlobalIndexTree.insertOrUpdate(eid, targetIP);
-	}
+	// @Override
+	// public void putEdgeInfoToIndex(String eid, String targetIP) {
+	//
+	// eGlobalIndexTree.insertOrUpdate(eid, targetIP);
+	// }
 
 	@Override
 	public void putVListToIndex(StringMapWritable map) {
@@ -770,28 +1024,6 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			vGlobalIndexTree.insertOrUpdate(spw.key, spw.value);
 		}
 	}
-
-	@Override
-	public void putEListToIndex(StringMapWritable map) {
-
-		for (StringPairWritable spw : map.data) {
-			eGlobalIndexTree.insertOrUpdate(spw.key, spw.value);
-		}
-	}
-
-	@Override
-	public void deleteVertexFromIndex(String vid) {
-
-		vGlobalIndexTree.remove(vid);
-	}
-
-	@Override
-	public void deleteEdgeFromIndex(String eid) {
-
-		eGlobalIndexTree.remove(eid);
-	}
-
-	
 
 	@Override
 	public String queryVertexToServer(String vid) {
@@ -821,132 +1053,190 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	}
 
 	@Override
-	public String queryEdgeToServer(String eid) {
+	public String queryEdgeToServer(String eid, String sourceID) {
 
-		if (SystemConf.getInstance().isIndexServer == true) {
-			return eGlobalIndexTree.get(eid);
-		} else {
-			if (SystemConf.getInstance().indexServerIP != null) {
-				GServerProtocol proxy;
+		return queryVertexToServer(sourceID);
+
+		// if (SystemConf.getInstance().isIndexServer == true) {
+		// return eGlobalIndexTree.get(eid);
+		// } else {
+		// if (SystemConf.getInstance().indexServerIP != null) {
+		// GServerProtocol proxy;
+		// try {
+		// proxy = RpcIOCommons.getGServerProtocol(SystemConf
+		// .getInstance().indexServerIP);
+		// String target = proxy.queryEdgeToServer(eid);
+		// if (Debug.serverStopProxy)
+		// RPC.stopProxy(proxy);
+		// return target;
+		// } catch (IOException e) {
+		// e.printStackTrace();
+		// }
+		// }
+		// }
+		// return null;
+	}
+
+	@Override
+	public void run() {
+		// Simply output all available gServers
+		try {
+			init();
+		} catch (InterruptedException | KeeperException e) {
+			e.printStackTrace();
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		isRunning = true;
+		while (isRunning == true) {
+			System.out.println("[" + SystemConf.getTime()
+					+ "][gSERVER] Running");
+			System.out.println("[" + SystemConf.getTime()
+					+ "][gSERVER] gServer IP:" + this.ip);
+			this.fileLock.checkAndRecover();
+			try {
+				synchronized (SystemConf.getInstance().isIndexServer) {
+					if (SystemConf.getInstance().isIndexServer == true) {
+						CpuUsage usage = CpuUsage.getUsage();
+						if (usage.cpuUsage > SystemConf.getInstance().gServer_usage_cpu
+								|| usage.memUsage > SystemConf.getInstance().gServer_usage_mem) {
+							try {
+								GMasterProtocol proxy = RpcIOCommons
+										.getMasterProxy();
+								proxy.requestToChangeIndexServer(SystemConf
+										.getInstance().localIP);
+								if (Debug.serverStopProxy)
+									RPC.stopProxy(proxy);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					}
+				}
+				Thread.sleep(15000);
+			} catch (InterruptedException e) {
+
+				e.printStackTrace();
+			} catch (Exception e) {
+
+				e.printStackTrace();
+			}
+		}
+		// Close Connection
+		rpcServer.stop();
+	}
+
+	@Override
+	public double reportUsageMark() {
+
+		CpuUsage usage;
+		try {
+			usage = CpuUsage.getUsage();
+			if (usage.cpuUsage < SystemConf.getInstance().gServer_usage_cpu
+					&& usage.memUsage < SystemConf.getInstance().gServer_usage_mem) {
+				return usage.cpuUsage + usage.memUsage;
+			} else {
+				return Double.MAX_VALUE;
+			}
+		} catch (Exception e) {
+
+			e.printStackTrace();
+		}
+		return Double.MAX_VALUE;
+
+	}
+
+	@Override
+	public boolean removeDataSchema(String dschemaID) {
+		// Update Cache First
+		dsBufferPool_schema.remove(dschemaID);
+		// Update File
+		return ZkIOCommons
+				.removeZKFile(zooKeeper,
+						SystemConf.getInstance().zoo_basePath_dSchema + "/"
+								+ dschemaID);
+	}
+
+	@Override
+	public boolean removeDataSet(String dsID) {
+
+		if (SystemConf.getInstance().isIndexServer) {
+			if (dsPathIndex.get(dsID) != null) {
+				return false;
+			} else {
+				dsPathIndex.remove(dsID);
 				try {
-					proxy = RpcIOCommons.getGServerProtocol(SystemConf
-							.getInstance().indexServerIP);
-					String target = proxy.queryEdgeToServer(eid);
+					GMasterProtocol proxy;
+					proxy = RpcIOCommons.getMasterProxy();
+					proxy.notifyDataSet_Remove(
+							SystemConf.getInstance().localIP, dsID);
 					if (Debug.serverStopProxy)
 						RPC.stopProxy(proxy);
-					return target;
+				} catch (IOException e) {
+
+					dsPathIndex.remove(dsID);
+					e.printStackTrace();
+					return false;
+				}
+				return true;
+			}
+		} else {
+			String indexIP = SystemConf.getInstance().indexServerIP;
+			if (indexIP != null && !indexIP.equals("")) {
+				GServerProtocol proxy;
+				try {
+					proxy = RpcIOCommons.getGServerProtocol(indexIP);
+					boolean result = proxy.removeDataSet(dsID);
+					if (Debug.serverStopProxy)
+						RPC.stopProxy(proxy);
+					return result;
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
-		}
-		return null;
-	}
 
-	protected boolean removeEdge_private(String id) {
-		if (EdgeExist(id)) {
-			if (eBufferPool_r.get(id) != null) {
-				eBufferPool_r.remove(id);
 			}
-			for (EdgeInfo info : eBufferPool_w) {
-				if (info.getId().equals(id)) {
-					vBufferPool_w.remove(info);
-					try {
-						GMasterProtocol gm;
-						gm = RpcIOCommons.getMasterProxy();
-						gm.removeEdgeFromIndex(id);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-					return true;
-				}
-			}
-			if (eLocalIndexTree.get(id) != null) {
-				String filePath = eLocalIndexTree.get(id);
-				if (filePath != null) {
-					EdgeCollectionWritable ew;
-					try {
-						ew = (EdgeCollectionWritable) (HDFS_Utilities
-								.getInstance().readFileToObject(filePath));
-						LinkedList<EdgeInfo> data = (LinkedList<EdgeInfo>) ew.coll;
-						for (EdgeInfo info : data) {
-							if (!info.getId().equals(id)) {
-								writeEdge(info);
-							} else {
-							}
-						}
-						eLocalIndexTree.remove(id);
-						HDFS_Utilities.getInstance().deleteFile(filePath);
-						GMasterProtocol gm;
-						gm = RpcIOCommons.getMasterProxy();
-						gm.removeEdgeFromIndex(id);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-				}
-			}
-			return true;
 		}
 		return false;
+
 	}
 
-
-	protected boolean removeVertex_local(String id) {
-		if (VertexExist(id)) {
-			if (vBufferPool_r.get(id) != null) {
-				vBufferPool_r.remove(id);
-			}
-			for (VertexInfo info : vBufferPool_w) {
-				if (info.getId().equals(id)) {
-					for (_EdgeInfo ei : info.getEdge_List()) {
-						removeEdge_private(ei.id);
-					}
-					vBufferPool_w.remove(info);
-					try {
-						GMasterProtocol gm;
-						gm = RpcIOCommons.getMasterProxy();
-						gm.removeVertexFromIndex(id);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-					return true;
-				}
-			}
-			if (vLocalIndexTree.get(id) != null) {
-				String filePath = vLocalIndexTree.get(id);
-				if (filePath != null) {
-					VertexCollectionWritable cw;
-					try {
-						cw = (VertexCollectionWritable) (HDFS_Utilities
-								.getInstance().readFileToObject(filePath));
-						LinkedList<VertexInfo> data = (LinkedList<VertexInfo>) cw.coll;
-						for (VertexInfo info : data) {
-							if (!info.getId().equals(id)) {
-								writeVertex(info);
-							} else {
-								for (_EdgeInfo ei : info.getEdge_List()) {
-									// remove all the edges
-									removeEdge_private(ei.id);
-								}
-							}
-						}
-						vLocalIndexTree.remove(id);
-						HDFS_Utilities.getInstance().deleteFile(filePath);
-						GMasterProtocol gm;
-						gm = RpcIOCommons.getMasterProxy();
-						gm.removeVertexFromIndex(id);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-				}
-			}
+	@Override
+	public boolean removeDataSet_Sync(String dsID) {
+		if (dsPathIndex.get(dsID) != null) {
+			return false;
+		} else {
+			dsPathIndex.remove(dsID);
 			return true;
 		}
-		return false;
+	}
+
+	@Override
+	public String removeDSIndex(String dsID, String dschemaID, String attriName) {
+		dsBufferPool_index.remove(BinarySearchStringIndex.getFileName(dsID,
+				dschemaID, attriName));
+		try {
+			HDFS_Utilities.getInstance().deleteFile(
+					SystemConf.getInstance().hdfs_basePath_data_index
+							+ "/"
+							+ BinarySearchStringIndex.getFileName(dsID,
+									dschemaID, attriName));
+			GMasterProtocol gMasterProtocol = RpcIOCommons.getMasterProxy();
+			gMasterProtocol.notifyDataSet_Index_Remove(
+					SystemConf.getInstance().localIP, dsID, dschemaID,
+					attriName);
+		} catch (IOException e) {
+
+			return e.getLocalizedMessage();
+		}
+		return "";
+	}
+
+	@Override
+	public void removeDSIndex_Sync(String dsID, String dschemaID,
+			String attriName) {
+		dsBufferPool_index.remove(BinarySearchStringIndex.getFileName(dsID,
+				dschemaID, attriName));
 	}
 
 	@Override
@@ -974,7 +1264,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}
 		return false;
 	}
-	
+
 	public boolean removeEdge_local(String id, String source_vertex_id) {
 		if (EdgeExist(id)) {
 			removeEdge_private(id);
@@ -1024,42 +1314,6 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	}
 
 	@Override
-	public boolean insertOrUpdateSchema(String graph_id, Graph_Schema gs) {
-		GraphSchemaCollectionSerializable gsc = schema_cache.get(graph_id);
-		if (gsc == null) {
-			// will read file from zookeeper
-			try {
-				org.apache.zookeeper.data.Stat stat = zooKeeper.exists(
-						SystemConf.getInstance().zoo_basePath_gSchema + "/"
-								+ graph_id, null);
-				if (stat != null) {
-					gsc = (GraphSchemaCollectionSerializable) ZkIOCommons
-							.unserialize(zooKeeper.getData(
-									SystemConf.getInstance().zoo_basePath_gSchema
-											+ "/" + graph_id, zooWatcher, stat));
-					if (gsc != null) {
-						gsc.schemas.put(gs.getsId(), gs);
-						return ZkIOCommons.setSchemaFile(zooKeeper, graph_id,
-								gsc);
-					}
-				} else {
-					gsc = new GraphSchemaCollectionSerializable();
-					gsc.schemas.put(gs.getsId(), gs);
-					return ZkIOCommons.setSchemaFile(zooKeeper, graph_id, gsc);
-				}
-			} catch (KeeperException | InterruptedException e) {
-
-				e.printStackTrace();
-				return false;
-			}
-			return false;
-		} else {
-			gsc.schemas.put(gs.getsId(), gs);
-			return ZkIOCommons.setSchemaFile(zooKeeper, graph_id, gsc);
-		}
-	}
-
-	@Override
 	public boolean removeSchema(String graph_id, String schema_id) {
 		GraphSchemaCollectionSerializable gsc = schema_cache.get(graph_id);
 		if (gsc == null) {
@@ -1095,46 +1349,168 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		}
 	}
 
-	protected boolean updateVertexInfo_local(VertexInfo info) {
-		if (VertexExist(info.getId())) {
-			vBufferPool_r.put(info.getId(), info);
-			for (VertexInfo vi : vBufferPool_w) {
-				if (vi.getId().equals(info.getId())) {
-					vBufferPool_w.remove(vi);
-					vBufferPool_w.add(info);
-					return true;
+	@Override
+	public String storeVertexAndUpdateIndex(VertexInfo vdata) {
+		if (Debug.printDetailedLog)
+			System.out
+					.println("[" + SystemConf.getTime()
+							+ "][gSERVER] RPC Received to StoreVertex!"
+							+ vdata.getId());
+		try {
+			GMasterProtocol proxy = RpcIOCommons.getMasterProxy();
+			writeVertex(vdata);
+			if (SystemConf.getInstance().isIndexServer) {
+				vGlobalIndexTree.insertOrUpdate(vdata.getId(),
+						SystemConf.getInstance().localIP);
+			}
+			proxy.insertVertexInfoToIndex(vdata.getId(),
+					SystemConf.getInstance().localIP);
+
+			if (Debug.serverStopProxy)
+				RPC.stopProxy(proxy);
+			return "";
+		} catch (IOException e) {
+
+			e.printStackTrace();
+			return e.getLocalizedMessage();
+		}
+	}
+
+	// protected void storeEdge(EdgeInfo edata) throws IOException {
+	// //GMasterProtocol proxy = RpcIOCommons.getMasterProxy();
+	//
+	// writeEdge(edata);
+	// // if (SystemConf.getInstance().isIndexServer) {
+	// // eGlobalIndexTree.insertOrUpdate(edata.getId(),
+	// // SystemConf.getInstance().localIP);
+	// // }
+	// // proxy.insertEdgeInfoToIndex(edata.getId(),
+	// // SystemConf.getInstance().localIP);
+	// //
+	// // if (Debug.serverStopProxy)
+	// // RPC.stopProxy(proxy);
+	// }
+
+	@Override
+	public String storeEdgeAndUpdateVertex(EdgeInfo edata) {
+		if (Debug.printDetailedLog)
+			System.out.println("[" + SystemConf.getTime()
+					+ "][gSERVER] RPC Received to StoreEdge!" + edata.getId());
+		try {
+			writeEdge(edata);
+			// updateVertex
+			insertEdgeToVertex(edata);
+
+			return "";
+		} catch (IOException e) {
+
+			e.printStackTrace();
+			return e.getLocalizedMessage();
+		}
+	}
+
+	@Override
+	public String storeVertexList(VertexCollectionWritable vdata) {
+		try {
+			for (VertexInfo v : vdata.coll) {
+				writeVertex(v);
+			}
+			return "";
+		} catch (IOException e) {
+			e.printStackTrace();
+			return e.getLocalizedMessage();
+		}
+	}
+
+	@Override
+	public String storeEdgeList(EdgeCollectionWritable edata) {
+		try {
+			Map<String, Map<String, ArrayList<_EdgeInfo>>> updateMap = new HashMap<>();
+			for (EdgeInfo e : edata.coll) {
+				writeEdge(e);
+				// TODO: batch update the vertex!
+				// If the vertex is in write cache, then update it.
+				boolean foundInWCache = false;
+				for (VertexInfo vi : vBufferPool_w) {
+					if (vi.getId().equals(e.getSource_vertex_id())) {
+						vi.getEdge_List().add(
+								new _EdgeInfo(e.getId(), e
+										.getTarget_vertex_id()));
+						foundInWCache = true;
+						break;
+					}
+				}
+				if (foundInWCache == false) {
+					// we need to use HDFS file to update it.
+					String filePath = vLocalIndexTree.get(e
+							.getSource_vertex_id());
+					if (updateMap.get(filePath) == null) {
+						Map<String, ArrayList<_EdgeInfo>> vertexMap = new HashMap<>();
+						ArrayList<_EdgeInfo> edgeData = new ArrayList<>();
+						edgeData.add(new _EdgeInfo(e.getId(), e
+								.getTarget_vertex_id()));
+						vertexMap.put(e.getSource_vertex_id(), edgeData);
+						updateMap.put(filePath, vertexMap);
+					} else {
+						updateMap
+								.get(filePath)
+								.get(e.getSource_vertex_id())
+								.add(new _EdgeInfo(e.getId(), e
+										.getTarget_vertex_id()));
+					}
 				}
 			}
-			if (vLocalIndexTree.get(info.getId()) != null) {
-				String filePath = vLocalIndexTree.get(info.getId());
+			
+			//then update HDFS file by Batch
+			for (String filePath : updateMap.keySet()) {
+				Map<String, ArrayList<_EdgeInfo>> vertexMaps = updateMap.get(filePath);
 				if (filePath != null) {
 					VertexCollectionWritable cw;
 					try {
 						cw = (VertexCollectionWritable) (HDFS_Utilities
 								.getInstance().readFileToObject(filePath));
 						LinkedList<VertexInfo> data = (LinkedList<VertexInfo>) cw.coll;
-						VertexInfo target = null;
 						for (VertexInfo vi : data) {
-							if (vi.getId().equals(info.getId())) {
-								target = vi;
-								break;
+							if (vertexMaps.containsKey(vi.getId())) {
+								//found the vertex. update it.
+								vi.getEdge_List().addAll(vertexMaps.get(vi.getId()));
+								vertexMaps.remove(vi.getId());
 							}
 						}
-						data.remove(target);
-						data.add(info);
-
 						flushToLocal(data, GP_DataType.Vertex);
 						HDFS_Utilities.getInstance().deleteFile(filePath);
 					} catch (IOException e) {
-
 						e.printStackTrace();
+						return e.getLocalizedMessage();
 					}
 				}
 			}
-			return true;
+			return "";
+		} catch (IOException e) {
+			e.printStackTrace();
+			return e.getLocalizedMessage();
 		}
-		return false;
 	}
+
+	@Override
+	public void stopService() {
+
+		isRunning = false;
+	}
+
+	// @Override
+	// public void putEListToIndex(StringMapWritable map) {
+	//
+	// for (StringPairWritable spw : map.data) {
+	// eGlobalIndexTree.insertOrUpdate(spw.key, spw.value);
+	// }
+	// }
+
+	// @Override
+	// public void deleteEdgeFromIndex(String eid) {
+	//
+	// eGlobalIndexTree.remove(eid);
+	// }
 
 	@Override
 	public boolean updateVertexInfo(VertexInfo info) {
@@ -1163,315 +1539,9 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	}
 
 	@Override
-	public boolean insertDataSet(String dsID, String hdfsPath) {
-
-		if (SystemConf.getInstance().isIndexServer) {
-			if (dsPathIndex.get(dsID) != null) {
-				return false;
-			} else {
-				dsPathIndex.insertOrUpdate(dsID, hdfsPath);
-				try {
-					GMasterProtocol proxy;
-					proxy = RpcIOCommons.getMasterProxy();
-					proxy.notifyDataSet_Insert(
-							SystemConf.getInstance().localIP, dsID, hdfsPath);
-					if (Debug.serverStopProxy)
-						RPC.stopProxy(proxy);
-				} catch (IOException e) {
-
-					dsPathIndex.remove(dsID);
-					e.printStackTrace();
-					return false;
-				}
-				return true;
-			}
-		} else {
-			if (SystemConf.getInstance().indexServerIP != null
-					&& !SystemConf.getInstance().indexServerIP.equals("")) {
-				try {
-					GServerProtocol proxy = RpcIOCommons
-							.getGServerProtocol(SystemConf.getInstance().indexServerIP);
-					boolean result = proxy.insertDataSet(dsID, hdfsPath);
-					if (Debug.serverStopProxy)
-						RPC.stopProxy(proxy);
-					return result;
-				} catch (IOException e) {
-					e.printStackTrace();
-					return false;
-				}
-
-			}
-		}
-		return false;
-
-	}
-
-	@Override
-	public boolean removeDataSet(String dsID) {
-
-		if (SystemConf.getInstance().isIndexServer) {
-			if (dsPathIndex.get(dsID) != null) {
-				return false;
-			} else {
-				dsPathIndex.remove(dsID);
-				try {
-					GMasterProtocol proxy;
-					proxy = RpcIOCommons.getMasterProxy();
-					proxy.notifyDataSet_Remove(
-							SystemConf.getInstance().localIP, dsID);
-					if (Debug.serverStopProxy)
-						RPC.stopProxy(proxy);
-				} catch (IOException e) {
-
-					dsPathIndex.remove(dsID);
-					e.printStackTrace();
-					return false;
-				}
-				return true;
-			}
-		} else {
-			String indexIP = SystemConf.getInstance().indexServerIP;
-			if (indexIP != null && !indexIP.equals("")) {
-				GServerProtocol proxy;
-				try {
-					proxy = RpcIOCommons.getGServerProtocol(indexIP);
-					boolean result = proxy.removeDataSet(dsID);
-					if (Debug.serverStopProxy)
-						RPC.stopProxy(proxy);
-					return result;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-			}
-		}
-		return false;
-
-	}
-
-	@Override
-	public boolean insertDataSet_Sync(String dsID, String hdfsPath) {
-		if (dsPathIndex.get(dsID) != null) {
-			return false;
-		} else {
-			dsPathIndex.insertOrUpdate(dsID, hdfsPath);
-			return true;
-		}
-	}
-
-	@Override
-	public boolean removeDataSet_Sync(String dsID) {
-		if (dsPathIndex.get(dsID) != null) {
-			return false;
-		} else {
-			dsPathIndex.remove(dsID);
-			return true;
-		}
-	}
-
-	@Override
-	public String getDataSetPath(String dsID) {
-		if (SystemConf.getInstance().isIndexServer == true) {
-			return readDataSetPath(dsID);
-		} else {
-			if (SystemConf.getInstance().indexServerIP != null) {
-				GServerProtocol proxy;
-				try {
-					proxy = RpcIOCommons.getGServerProtocol(SystemConf
-							.getInstance().indexServerIP);
-					String result = proxy.getDataSetPath(dsID);
-					if (Debug.serverStopProxy)
-						RPC.stopProxy(proxy);
-					return result;
-				} catch (IOException e) {
-
-					e.printStackTrace();
-				}
-			}
-			return null;
-		}
-	}
-
-
-	protected String readDataSetPath(String dsID) {
-		if (SystemConf.getInstance().isIndexServer == true) {
-			return dsPathIndex.get(dsID);
-		} else {
-			return null;
-		}
-	}
-
-	@Override
-	public String createDSIndex(final String dsID, final String dschemaID,
-			final String attriName) {
-
-		new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-
-				try {
-					String jarPath = SystemConf.getInstance().gServer_data_index_setup_jarPath;
-					String inputPath = getDataSetPath(dsID);
-					String outputPath = SystemConf.getInstance().hdfs_tempPath_data_index
-							+ "/" + new Date().getTime();
-
-					String sourceIP = SystemConf.getInstance().localIP;
-
-					Process p = Runtime.getRuntime().exec(
-							"hadoop jar " + jarPath + " " + inputPath + " "
-									+ outputPath + " " + dschemaID + " "
-									+ attriName + " " + sourceIP);
-
-					BufferedReader br = new BufferedReader(
-							new InputStreamReader(p.getErrorStream()));
-					String line;
-					while ((line = br.readLine()) != null)
-						System.out.println(line);
-
-					transformIndexObj(outputPath, dsID, dschemaID, attriName);
-
-				} catch (java.io.IOException e) {
-					return;
-				}
-			}
-		}).start();
-
-		return "";
-	}
-
-	protected void transformIndexObj(String outputPath, String dsID,
-			String dschemaID, String attriName) {
-		// Transform the index into an Object
-		// TODO ...
-		BinarySearchStringIndex bsi;
-		try {
-			bsi = HDFS_Utilities.getInstance().createBSIndex(
-					outputPath + "/part-r-00000", dsID, dschemaID, attriName);
-			dsBufferPool_index.put(BinarySearchStringIndex.getFileName(dsID,
-					dschemaID, attriName), bsi);
-			HDFS_Utilities.getInstance().flushObjectToHDFS(
-					SystemConf.getInstance().hdfs_basePath_data_index,
-					BinarySearchStringIndex.getFileName(dsID, dschemaID,
-							attriName), bsi);
-			HDFS_Utilities.getInstance().removeFolder_Recursive(outputPath);
-			System.out.println("Finished!");
-		} catch (IOException e) {
-
-			e.printStackTrace();
-		}
-	}
-
-	@Override
 	public String updateDSIndex(String dsID, String dschemaID, String attriName) {
 		removeDSIndex(dsID, dschemaID, attriName);
 		return createDSIndex(dsID, dschemaID, attriName);
-	}
-
-	@Override
-	public String removeDSIndex(String dsID, String dschemaID, String attriName) {
-		dsBufferPool_index.remove(BinarySearchStringIndex.getFileName(dsID,
-				dschemaID, attriName));
-		try {
-			HDFS_Utilities.getInstance().deleteFile(
-					SystemConf.getInstance().hdfs_basePath_data_index
-							+ "/"
-							+ BinarySearchStringIndex.getFileName(dsID,
-									dschemaID, attriName));
-			GMasterProtocol gMasterProtocol = RpcIOCommons.getMasterProxy();
-			gMasterProtocol.notifyDataSet_Index_Remove(
-					SystemConf.getInstance().localIP, dsID, dschemaID,
-					attriName);
-		} catch (IOException e) {
-
-			return e.getLocalizedMessage();
-		}
-		return "";
-	}
-
-	@Override
-	public void removeDSIndex_Sync(String dsID, String dschemaID,
-			String attriName) {
-		dsBufferPool_index.remove(BinarySearchStringIndex.getFileName(dsID,
-				dschemaID, attriName));
-	}
-
-	@Override
-	public BinarySearchStringIndex getDSIndex(String dsID, String dschemaID,
-			String attriName) {
-		BinarySearchStringIndex target = dsBufferPool_index
-				.get(BinarySearchStringIndex.getFileName(dsID, dschemaID,
-						attriName));
-		if (target != null) {
-			return target;
-		} else {
-			// Read HDFS file
-			BinarySearchStringIndex obj;
-			try {
-				obj = (BinarySearchStringIndex) HDFS_Utilities
-						.getInstance()
-						.readFileToObject(
-								SystemConf.getInstance().hdfs_basePath_data_index
-										+ "/"
-										+ BinarySearchStringIndex.getFileName(
-												dsID, dschemaID, attriName));
-			} catch (IOException e) {
-
-				e.printStackTrace();
-				return null;
-			}
-			return obj;
-		}
-	}
-
-	@Override
-	public boolean insertOrUpdateDataSchema(String dschemaID, Data_Schema ds) {
-		// Update Cache First
-		if (dsBufferPool_schema.get(dschemaID) != null) {
-			dsBufferPool_schema.put(dschemaID, ds);
-		}
-		// Update File
-		return ZkIOCommons.setDSSchemaFile(zooKeeper, dschemaID, ds);
-	}
-
-	@Override
-	public boolean removeDataSchema(String dschemaID) {
-		// Update Cache First
-		dsBufferPool_schema.remove(dschemaID);
-		// Update File
-		return ZkIOCommons
-				.removeZKFile(zooKeeper,
-						SystemConf.getInstance().zoo_basePath_dSchema + "/"
-								+ dschemaID);
-	}
-
-	@Override
-	public Data_Schema getDataSchema(String dschemaID) {
-		// Cache First
-		if (dsBufferPool_schema.containsKey(dschemaID)) {
-			return dsBufferPool_schema.get(dschemaID);
-		} else {
-			// File file
-			try {
-				Stat stat = zooKeeper.exists(
-						SystemConf.getInstance().zoo_basePath_dSchema + "/"
-								+ dschemaID, null);
-				if (stat != null) {
-					Data_Schema gsc = (Data_Schema) ZkIOCommons
-							.unserialize(zooKeeper.getData(
-									SystemConf.getInstance().zoo_basePath_dSchema
-											+ "/" + dschemaID, zooWatcher, stat));
-					dsBufferPool_schema.put(dschemaID, gsc);
-					return gsc;
-				} else {
-					return null;
-				}
-			} catch (KeeperException | InterruptedException e) {
-
-				e.printStackTrace();
-				return null;
-			}
-		}
 	}
 
 	@Override
@@ -1488,18 +1558,19 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 
 				if (Debug.printDetailedLog) {
 					Log_Utilities.genGServerLog(Log_Utilities.LOG_HEADER_DEBUG,
-							"TraverseGraphAsync Run Entered! StartingVID="+starting_v_id);
+							"TraverseGraphAsync Run Entered! StartingVID="
+									+ starting_v_id);
 				}
 				param.beginTime = new Date().getTime();
-				
+
 				UUID rootJobID = UUID.randomUUID();
 
 				try {
 					PrefixWritable pw = new PrefixWritable();
 					pw.data.add(0);
 					if (param.method == TraversalMethod.BFS) {
-						handleGraph_Traversal_Async(starting_v_id, pw,
-								param, 0, "", rootJobID);
+						handleGraph_Traversal_Async(starting_v_id, pw, param,
+								0, "", rootJobID);
 					} else {
 						// DFS
 						handleGraph_Traversal_Async(starting_v_id, pw, param,
@@ -1625,42 +1696,43 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					System.out.println(Log_Utilities.genGServerLog(
 							Log_Utilities.LOG_HEADER_DEBUG,
 							"GraphTraversal Runnable Run Begin!"));
-					
-					if (array.length == 1) {
-						//only one target
-						TraverseJobValuePairWritable vertex = array[0];
+
+				if (array.length == 1) {
+					// only one target
+					TraverseJobValuePairWritable vertex = array[0];
+					try {
+						handleGraph_Traversal_Async(vertex.value,
+								vertex.prefix, param, currentLevel.get(),
+								parentIP, jobID.getUUID());
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				} else {
+					// insert additional layer
+
+					TraverseJobIntermediateResult jobResult = new TraverseJobIntermediateResult(
+							param, 0, parentIP);
+
+					synchronized (traversalResult) {
+						traversalResult.put(jobID.getUUID(), jobResult);
+					}
+
+					for (TraverseJobValuePairWritable vertex : array) {
+						UUID subJobID = UUID.randomUUID();
+
 						try {
-							handleGraph_Traversal_Async(vertex.value, vertex.prefix, param, currentLevel.get(), parentIP, jobID.getUUID());
+							jobTables.put(subJobID, jobID.getUUID());
+							jobResult.remainingJobsUnfinished++;
+							handleGraph_Traversal_Async(vertex.value,
+									vertex.prefix, param, currentLevel.get(),
+									SystemConf.getInstance().localIP, subJobID);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-					} else {
-						//insert additional layer
-						
-						TraverseJobIntermediateResult jobResult = new TraverseJobIntermediateResult(
-								param, 0, parentIP);
-
-						synchronized (traversalResult) {
-							traversalResult.put(jobID.getUUID(), jobResult);
-						}
-						
-						for (TraverseJobValuePairWritable vertex : array) {
-							UUID subJobID = UUID.randomUUID();
-							
-							try {
-								jobTables.put(subJobID, jobID.getUUID());
-								jobResult.remainingJobsUnfinished++;
-								handleGraph_Traversal_Async(vertex.value,
-											vertex.prefix, param,
-											currentLevel.get(), SystemConf.getInstance().localIP,
-											subJobID);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
 					}
 				}
-			
+			}
+
 		}).start();
 
 	}
@@ -1752,20 +1824,18 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 	// }
 
 	protected void handleGraph_Traversal_Async(String starting_v_id,
-			PrefixWritable prefix, TraverseJobParameters param, int currentLevel,
-			String parentIP, UUID jobID) throws IOException {
+			PrefixWritable prefix, TraverseJobParameters param,
+			int currentLevel, String parentIP, UUID jobID) throws IOException {
 
 		if (Debug.printDetailedLog) {
 			System.out.println(Log_Utilities.genGServerLog(
 					Log_Utilities.LOG_HEADER_DEBUG,
 					"HandleGraph_Traversal_Async Entered!"));
-			System.out
-					.println(Log_Utilities.genGServerLog(
-							Log_Utilities.LOG_HEADER_DEBUG,
-							"HandleGraph_Traversal_Async vid=" + starting_v_id
-									+ ",prefix=" + prefix + ",jobid="
-									+ jobID + ",parentIP="
-									+ parentIP));
+			System.out.println(Log_Utilities.genGServerLog(
+					Log_Utilities.LOG_HEADER_DEBUG,
+					"HandleGraph_Traversal_Async vid=" + starting_v_id
+							+ ",prefix=" + prefix + ",jobid=" + jobID
+							+ ",parentIP=" + parentIP));
 		}
 
 		TraverseJobIntermediateResult jobResult = new TraverseJobIntermediateResult(
@@ -1774,10 +1844,11 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 		synchronized (traversalResult) {
 			traversalResult.put(jobID, jobResult);
 		}
-		
+
 		boolean alreadyVisited = false;
 
-		HashSet<TraverseJobValuePairWritable> visitedVertices = visitedVertexMap.get(param.jobID.getUUID());
+		HashSet<TraverseJobValuePairWritable> visitedVertices = visitedVertexMap
+				.get(param.jobID.getUUID());
 		if (visitedVertices == null) {
 			visitedVertices = new HashSet<>();
 			visitedVertexMap.put(param.jobID.getUUID(), visitedVertices);
@@ -1788,30 +1859,34 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					if (Debug.printDetailedLog) {
 						System.out.println(Log_Utilities.genGServerLog(
 								Log_Utilities.LOG_HEADER_DEBUG,
-								"HandleGraph_Traversal_Async Already Visited! vid="+starting_v_id+",jobID="+jobID));
+								"HandleGraph_Traversal_Async Already Visited! vid="
+										+ starting_v_id + ",jobID=" + jobID));
 					}
-					//Do we need to fix the prefix?
+					// Do we need to fix the prefix?
 					if (entry.prefix.compareTo(prefix) > 0) {
-						jobResult.result.add(new TraverseJobValuePairWritable(prefix, entry.prefix.toString(), true));
+						jobResult.result.add(new TraverseJobValuePairWritable(
+								prefix, entry.prefix.toString(), true));
 						entry.prefix = prefix;
 					}
 					break;
 				}
- 			}
+			}
 		}
-		
+
 		boolean noOtherJob = true;
-		
+
 		if (!alreadyVisited) {
 			Map<String, LinkedList<TraverseJobValuePairWritable>> remoteTarget = new HashMap<>();
 			LinkedList<TraverseJobValuePairWritable> localTarget = new LinkedList<>();
 
 			VertexData vd = readVertexData(starting_v_id);
 			// visit the vertex
-			jobResult.result.add(new TraverseJobValuePairWritable(prefix, vd.getData().get("id")));
+			jobResult.result.add(new TraverseJobValuePairWritable(prefix, vd
+					.getData().get("id")));
 			Integer i = 0;
 			// update visited list
-			visitedVertexMap.get(param.jobID.getUUID()).add(new TraverseJobValuePairWritable(prefix, starting_v_id));
+			visitedVertexMap.get(param.jobID.getUUID()).add(
+					new TraverseJobValuePairWritable(prefix, starting_v_id));
 
 			// now for every neighbors
 			if (currentLevel < param.maxdepth) {
@@ -1824,18 +1899,19 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 						if (VertexExist(ei.target_vertex_id)) {
 							// the neighbor is local
 							jobResult.remainingJobsUnfinished++;
-							localTarget.add(new TraverseJobValuePairWritable(pw, ei.target_vertex_id));
-							
+							localTarget.add(new TraverseJobValuePairWritable(
+									pw, ei.target_vertex_id));
+
 						} else {
 							// need to contact remote server
 							String remoteIP = queryVertexToServer(ei.target_vertex_id);
 							if (remoteTarget.get(remoteIP) == null) {
-								remoteTarget.put(remoteIP,
-										new LinkedList<TraverseJobValuePairWritable>());
+								remoteTarget
+										.put(remoteIP,
+												new LinkedList<TraverseJobValuePairWritable>());
 							}
 							remoteTarget.get(remoteIP).add(
-									new TraverseJobValuePairWritable(
-											pw,
+									new TraverseJobValuePairWritable(pw,
 											ei.target_vertex_id));
 						}
 						i++;
@@ -1849,14 +1925,16 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 						if (VertexExist(ei.target_vertex_id)) {
 							// the neighbor is local
 							jobResult.remainingJobsUnfinished++;
-							localTarget.add(new TraverseJobValuePairWritable(pw, ei.target_vertex_id));
-							
+							localTarget.add(new TraverseJobValuePairWritable(
+									pw, ei.target_vertex_id));
+
 						} else {
 							// need to contact remote server
 							String remoteIP = queryVertexToServer(ei.target_vertex_id);
 							if (remoteTarget.get(remoteIP) == null) {
-								remoteTarget.put(remoteIP,
-										new LinkedList<TraverseJobValuePairWritable>());
+								remoteTarget
+										.put(remoteIP,
+												new LinkedList<TraverseJobValuePairWritable>());
 							}
 							remoteTarget.get(remoteIP).add(
 									new TraverseJobValuePairWritable(pw,
@@ -1867,8 +1945,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					}
 				}
 			}
-			
-			//call remote First
+
+			// call remote First
 			Set<String> remoteIPs = remoteTarget.keySet();
 			for (String remoteNodeIP : remoteIPs) {
 				noOtherJob = false;
@@ -1883,16 +1961,18 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 							System.out.println(Log_Utilities.genGServerLog(
 									Log_Utilities.LOG_HEADER_DEBUG,
 									"HandleGraph_Traversal_Async SendRemote! fromJobID="
-										+ jobID.toString() + ",To=" + remoteNodeIP)
-								+ ",ToJobID=" + remoteSubJobID);
+											+ jobID.toString() + ",To="
+											+ remoteNodeIP)
+									+ ",ToJobID=" + remoteSubJobID);
 						}
 					}
 					jobTables.put(remoteSubJobID, jobID);
 					jobResult.remainingJobsUnfinished++;
 					proxy.traverseGraph_Remote_Async(list
-							.toArray(new TraverseJobValuePairWritable[list.size()]),
-							param, new IntWritable(currentLevel + 1), SystemConf
-									.getInstance().localIP, new UUIDWritable(
+							.toArray(new TraverseJobValuePairWritable[list
+									.size()]), param, new IntWritable(
+							currentLevel + 1),
+							SystemConf.getInstance().localIP, new UUIDWritable(
 									remoteSubJobID));
 					if (Debug.serverStopProxy)
 						RPC.stopProxy(proxy);
@@ -1900,7 +1980,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					e.printStackTrace();
 				}
 			}
-			
+
 			// call local next
 			for (TraverseJobValuePairWritable target : localTarget) {
 				noOtherJob = false;
@@ -1908,28 +1988,30 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 				if (Debug.printDetailedLog) {
 					System.out.println(Log_Utilities.genGServerLog(
 							Log_Utilities.LOG_HEADER_DEBUG,
-							"HandleGraph_Traversal_Async SendLocal! vid="+target.value+",jobID="+localSubJobID+",fromID="+jobID));
+							"HandleGraph_Traversal_Async SendLocal! vid="
+									+ target.value + ",jobID=" + localSubJobID
+									+ ",fromID=" + jobID));
 				}
 				jobTables.put(localSubJobID, jobID);
-				handleGraph_Traversal_Async(target.value,
-						target.prefix, param, currentLevel + 1,
-						SystemConf.getInstance().localIP,
+				handleGraph_Traversal_Async(target.value, target.prefix, param,
+						currentLevel + 1, SystemConf.getInstance().localIP,
 						localSubJobID);
 			}
 		}
-		
-		
-		
+
 		// notify finish
 		if (jobResult.remainingJobsUnfinished == 0 && noOtherJob) {
-			TraverseJobValuePairWritable[] result = jobResult.result.toArray(new TraverseJobValuePairWritable[jobResult.result.size()]);
+			TraverseJobValuePairWritable[] result = jobResult.result
+					.toArray(new TraverseJobValuePairWritable[jobResult.result
+							.size()]);
 
 			if (parentIP.equals(SystemConf.getInstance().localIP)) {
 				// happens locally
 				if (Debug.printDetailedLog) {
 					System.out.println(Log_Utilities.genGServerLog(
 							Log_Utilities.LOG_HEADER_DEBUG,
-							"Traverse NotifyFinish! jobID="+jobID+",To=Local"));
+							"Traverse NotifyFinish! jobID=" + jobID
+									+ ",To=Local"));
 				}
 				this.traverseGraph_NotifyFinish(result, new UUIDWritable(jobID));
 			} else {
@@ -1939,7 +2021,8 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					if (Debug.printDetailedLog) {
 						System.out.println(Log_Utilities.genGServerLog(
 								Log_Utilities.LOG_HEADER_DEBUG,
-								"Traverse NotifyFinish! jobID="+jobID+",To="+parentIP));
+								"Traverse NotifyFinish! jobID=" + jobID
+										+ ",To=" + parentIP));
 					}
 					proxy.traverseGraph_NotifyFinish(result, new UUIDWritable(
 							jobID));
@@ -1950,51 +2033,59 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					e.printStackTrace();
 				}
 			}
-			//remove jobResult
+			// remove jobResult
 			traversalResult.remove(jobID);
 		}
 
-		
 	}
 
 	@Override
-	public void traverseGraph_NotifyFinish(TraverseJobValuePairWritable[] result, UUIDWritable jobID) {
+	public void traverseGraph_NotifyFinish(
+			TraverseJobValuePairWritable[] result, UUIDWritable jobID) {
 
 		// remove job-table
 		TraverseJobIntermediateResult tempResult = traversalResult
 				.get(jobTables.get(jobID.getUUID()));
-		
+
 		if (Debug.printDetailedLog) {
 			System.out.println(Log_Utilities.genGServerLog(
 					Log_Utilities.LOG_HEADER_DEBUG,
-					"Traverse NotifyFinish RECEIVE! FromjobID="+jobID+",To="+jobTables.get(jobID.getUUID())));
+					"Traverse NotifyFinish RECEIVE! FromjobID=" + jobID
+							+ ",To=" + jobTables.get(jobID.getUUID())));
 		}
-		
+
 		if (tempResult != null) {
 
 			if (result != null && !result.equals("")) {
 				tempResult.appendResults(result);
 			}
 			tempResult.remainingJobsUnfinished--;
-			
+
 			if (Debug.printDetailedLog) {
 				System.out.println(Log_Utilities.genGServerLog(
 						Log_Utilities.LOG_HEADER_DEBUG,
-						"Traverse NotifyFinish RECEIVE! jobID="+jobTables.get(jobID.getUUID())+", tempResult Not NULL, Remaining="+tempResult.remainingJobsUnfinished));
+						"Traverse NotifyFinish RECEIVE! jobID="
+								+ jobTables.get(jobID.getUUID())
+								+ ", tempResult Not NULL, Remaining="
+								+ tempResult.remainingJobsUnfinished));
 			}
-			
+
 			if (tempResult.remainingJobsUnfinished == 0) {
-				
+
 				tempResult.cleanResults();
-				
+
 				if (Debug.printDetailedLog) {
 					System.out.println(Log_Utilities.genGServerLog(
 							Log_Utilities.LOG_HEADER_DEBUG,
-							"Traverse NotifyFinish! jobID="+jobTables.get(jobID.getUUID())+",To="+tempResult.parentIP));
+							"Traverse NotifyFinish! jobID="
+									+ jobTables.get(jobID.getUUID()) + ",To="
+									+ tempResult.parentIP));
 				}
 				// Job finished. Notify the upper layer
 				if (!tempResult.parentIP.equals("")) {
-					TraverseJobValuePairWritable[] jobResult = tempResult.result.toArray(new TraverseJobValuePairWritable[tempResult.result.size()]);
+					TraverseJobValuePairWritable[] jobResult = tempResult.result
+							.toArray(new TraverseJobValuePairWritable[tempResult.result
+									.size()]);
 					if (tempResult.parentIP
 							.equals(SystemConf.getInstance().localIP)) {
 						// happens locally
@@ -2029,14 +2120,15 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 					System.out.println("[" + SystemConf.getTime()
 							+ "][gSERVER][Graph Traversal] Result: "
 							+ tempResult.genResultString());
-					System.out.println("[" + SystemConf.getTime()
-							+ "][gSERVER][Graph Traversal] [********TimeCost(ms)********]: "
-							+ ((new Date().getTime()) - tempResult.param.beginTime));
+					System.out
+							.println("["
+									+ SystemConf.getTime()
+									+ "][gSERVER][Graph Traversal] [********TimeCost(ms)********]: "
+									+ ((new Date().getTime()) - tempResult.param.beginTime));
 				}
-				
-				traversalResult
-				.remove(jobTables.get(jobID.getUUID()));
-				
+
+				traversalResult.remove(jobTables.get(jobID.getUUID()));
+
 			}
 		}
 		jobTables.remove(jobID);

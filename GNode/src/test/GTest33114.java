@@ -151,7 +151,7 @@ public class GTest33114 {
 			//For Vertex
 			GServerProtocol gsProtocol = RpcIOCommons.getGServerProtocol(gServerIP);
 			VertexInfo info = gsProtocol.getVertexInfo(vertexIDToQuery);
-			String target = gsProtocol.queryVertexToServer(vertexIDToQuery);
+			//String target = gsProtocol.queryVertexToServer(vertexIDToQuery);
 			System.err.println(info.getSchema_id());
 			VertexData data = gsProtocol.getVertexData(vertexIDToQuery);
 			System.err.println(data.getData().get("creation_time"));

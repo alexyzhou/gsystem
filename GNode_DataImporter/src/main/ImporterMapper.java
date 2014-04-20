@@ -2,9 +2,11 @@ package main;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import rpc.GMasterProtocol;
@@ -12,6 +14,7 @@ import rpc.GServerProtocol;
 import rpc.RpcIOCommons;
 import system.SystemConf;
 import system.error.ErrorCode;
+import test.Debug;
 import test.TestVariables;
 import data.io.DataPointers_Entity;
 import data.io.DataPointers_Entity._DSInfo;
@@ -20,8 +23,9 @@ import data.io.Graph_Schema;
 import data.io.Graph_Schema.Attribute;
 import data.io.VertexInfo;
 import data.writable.EdgeCollectionWritable;
+import data.writable.VertexCollectionWritable;
 
-public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
+public class ImporterMapper extends Mapper<LongWritable, Text, LongWritable, Text> {
 
 	
 
@@ -31,11 +35,15 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 
 	protected static Graph_Schema vertexSchema;
 	protected static Graph_Schema edgeSchema;
-
+	
+	protected static String dataSetID = "";
+	
+	protected LinkedList<VertexInfo> vertexSet;
+	protected LinkedList<EdgeInfo> edgeSet;
 	
 	
-	private static Text vertexText = new Text("v");
-	private static Text edgeText = new Text("e");
+//	private static Text vertexText = new Text("v");
+//	private static Text edgeText = new Text("e");
 	
 
 	@Override
@@ -66,8 +74,19 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 		vertexSchema = TestVariables.get_VertexSchema();
 		edgeSchema = TestVariables.get_EdgeSchema();
 		
-		SystemConf.getInstance().masterIP = context.getConfiguration().get("GNMasterIP");
+		SystemConf.getInstance().masterIP = TestVariables.MASTER_IP;
+		dataSetID = context.getConfiguration().get("GNDSID");
 		
+		if (vertexSet == null) {
+			vertexSet = new LinkedList<>();
+		} else {
+			vertexSet.clear();
+		}
+		if (edgeSet == null) {
+			edgeSet = new LinkedList<>();
+		} else {
+			edgeSet.clear();
+		}
 	}
 	
 	
@@ -77,6 +96,16 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 			InterruptedException {
 		super.cleanup(context);
 		
+		VertexCollectionWritable vColl = new VertexCollectionWritable(vertexSet);
+		EdgeCollectionWritable eColl = new EdgeCollectionWritable(edgeSet);
+		
+		try {
+			GMasterProtocol proxy = RpcIOCommons.getMasterProxy();
+			proxy.storeVertexAndEdgeList(vColl, eColl);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		RpcIOCommons.stop();
 	}
 
@@ -84,7 +113,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 
 	@Override
 	protected void map(LongWritable key, Text value,
-			Mapper<LongWritable, Text, Text, Text>.Context context)
+			Mapper<LongWritable, Text, LongWritable, Text>.Context context)
 			throws IOException, InterruptedException {
 
 		String[] values = value.toString().split(",");
@@ -98,7 +127,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 
 			DataPointers_Entity dp = new DataPointers_Entity();
 			for (Attribute attr : vertexSchema.getAttributes()) {
-				_DSInfo dsi = new _DSInfo(TestVariables.DATASET_ID, TestVariables.DATASCHEMA_ID, key.get(),
+				_DSInfo dsi = new _DSInfo(dataSetID, TestVariables.DATASCHEMA_ID, key.get(),
 						vertexLink1.get(attr.name));
 				dp.data.put(attr.name, dsi);
 			}
@@ -111,7 +140,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 			vse.setGraph_id(TestVariables.GRAPH_ID);
 			DataPointers_Entity dp2 = new DataPointers_Entity();
 			for (Attribute attr : vertexSchema.getAttributes()) {
-				_DSInfo dsi = new _DSInfo(TestVariables.DATASET_ID, TestVariables.DATASCHEMA_ID, key.get(),
+				_DSInfo dsi = new _DSInfo(dataSetID, TestVariables.DATASCHEMA_ID, key.get(),
 						vertexLink2.get(attr.name));
 				dp2.data.put(attr.name, dsi);
 			}
@@ -125,44 +154,52 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 			ei.setTarget_vertex_id(values[5]);
 			DataPointers_Entity dpe = new DataPointers_Entity();
 			for (Attribute attr : edgeSchema.getAttributes()) {
-				_DSInfo dsi = new _DSInfo(TestVariables.DATASET_ID, TestVariables.DATASCHEMA_ID, key.get(), edgeLink.get(attr.name));
+				_DSInfo dsi = new _DSInfo(dataSetID, TestVariables.DATASCHEMA_ID, key.get(), edgeLink.get(attr.name));
 				dpe.data.put(attr.name, dsi);
 			}
 			ei.setPointer_List(dpe);
 
-			try {
-				context.write(vertexText, new Text(storeVertexInfo(vf)));
-				context.write(vertexText, new Text(storeVertexInfo(vse)));
-				context.write(edgeText, new Text(storeEdgeInfo(ei)));
-			} catch (IOException e) {
-				System.err.println(e.getLocalizedMessage());
-			}
+			//try {
+				
+				//storeVertexInfo(vf);
+				//storeVertexInfo(vse);
+				//storeEdgeInfo(ei);
+//				context.write(vertexText, new Text(storeVertexInfo(vf)));
+//				context.write(vertexText, new Text(storeVertexInfo(vse)));
+//				context.write(edgeText, new Text(storeEdgeInfo(ei)));
+			//} catch (IOException e) {
+				//System.err.println(e.getLocalizedMessage());
+			//}
+				
+			vertexSet.add(vf);
+			vertexSet.add(vse);
+			edgeSet.add(ei);
 			
 		}
 		
 		
 	}
 	
-	protected String storeVertexInfo(VertexInfo v) throws IOException {
+	protected void storeVertexInfo(VertexInfo v) throws IOException {
 		GMasterProtocol mProtocol = RpcIOCommons.getMasterProxy();
 		
 		String resultIP = mProtocol.findTargetGServer_Store(v);
 		if (!(resultIP == null || resultIP.equals(ErrorCode.VERTEX_ALREADYEXIST) || resultIP.equals(""))) {
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(resultIP);
-			gsProtocol.storeVertex(v, new EdgeCollectionWritable());
-			return "Succeed With "+v.getId();
+			gsProtocol.storeVertexAndUpdateIndex(v);
+			//return "Succeed With "+v.getId();
 		} else {
 			System.err.println("[Client]" + SystemConf.getTime()
 					+ "[ERROR] Vertex " + v.getId()
 					+ " findgServer failed");
 			System.err.println("insert Graph failed!");
-			return "";
+			//return "";
 		}
 		
 	}
 	
-	protected String storeEdgeInfo(EdgeInfo e) throws IOException {
+	protected void storeEdgeInfo(EdgeInfo e) throws IOException {
 		
 		GMasterProtocol mProtocol = RpcIOCommons.getMasterProxy();
 		String resultIP = mProtocol.findTargetGServer_StoreEdge(e);
@@ -170,14 +207,14 @@ public class ImporterMapper extends Mapper<LongWritable, Text, Text, Text> {
 		if (!(resultIP == null || resultIP.equals(ErrorCode.EDGE_ALREADYEXIST) || resultIP.equals(""))) {
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(resultIP);
-			gsProtocol.storeEdge(e);
-			return "Succeed E Wtih "+e.getId();
+			gsProtocol.storeEdgeAndUpdateVertex(e);
+			//return "Succeed E Wtih "+e.getId();
 		} else {
 			System.err.println("[Client]" + SystemConf.getTime()
 					+ "[ERROR] Vertex " + e.getId()
 					+ " findgServer failed");
 			System.err.println("insert Graph failed!");
-			return "";
+			//return "";
 		}
 	}
 

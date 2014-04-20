@@ -4,6 +4,8 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 
 import data.io.EdgeInfo;
 import data.io.VertexInfo;
+import data.writable.EdgeCollectionWritable;
+import data.writable.VertexCollectionWritable;
 
 public interface GMasterProtocol extends VersionedProtocol {
 	
@@ -14,6 +16,8 @@ public interface GMasterProtocol extends VersionedProtocol {
 			//insert
 			public String findTargetGServer_Store(VertexInfo infomation);
 			public String findTargetGServer_StoreEdge(EdgeInfo information);
+			public String storeVertexAndEdgeList(VertexCollectionWritable vdata,
+					EdgeCollectionWritable edata);
 			//update
 			//remove
 			//query
@@ -22,11 +26,11 @@ public interface GMasterProtocol extends VersionedProtocol {
 			
 			//insert
 			public void insertVertexInfoToIndex(String vid, String ip);
-			public void insertEdgeInfoToIndex(String eid, String ip);
+			//public void insertEdgeInfoToIndex(String eid, String ip);
 			//update
 			//remove
 			public void removeVertexFromIndex(String vid);
-			public void removeEdgeFromIndex(String eid);
+			//public void removeEdgeFromIndex(String eid);
 			//query
 	
 		//Graph Schema

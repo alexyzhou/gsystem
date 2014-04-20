@@ -111,9 +111,10 @@ public class CreateSimpleGraph {
                 .post( ClientResponse.class );
 
         final URI location = response.getLocation();
+        String[] values = location.toString().split("/");
         System.out.println( String.format(
                 "POST to [%s], status code [%d], location header [%s]",
-                nodeEntryPointUri, response.getStatus(), location.toString() ) );
+                nodeEntryPointUri, response.getStatus(), values[values.length-1] ) );
         response.close();
 
         return location;

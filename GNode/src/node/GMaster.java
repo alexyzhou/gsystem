@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -26,8 +27,10 @@ import zk.ZkObtainer;
 import data.io.EdgeInfo;
 import data.io.VertexInfo;
 import data.writable.BPlusTreeStrStrWritable;
+import data.writable.EdgeCollectionWritable;
 import data.writable.StringMapWritable;
 import data.writable.StringPairWritable;
+import data.writable.VertexCollectionWritable;
 import ds.bplusTree.BPlusTree;
 
 public class GMaster extends GNode implements Runnable, GMasterProtocol {
@@ -81,7 +84,8 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	protected HashMap<GServerInfo, ArrayList<GServerInfo>> gServerList;
 	protected BPlusTree<String, String> vGlobalTree;
-	protected BPlusTree<String, String> eGlobalTree;
+	protected HashMap<String, Integer> gServerStorageMap;
+	//protected BPlusTree<String, String> eGlobalTree;
 	protected BPlusTree<String, String> dsPathIndex;
 
 	protected StringMapWritable getVList() {
@@ -93,14 +97,14 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		return smw;
 	}
 
-	protected StringMapWritable getEList() {
-		StringMapWritable smw = new StringMapWritable();
-		Set<String> keySet = eGlobalTree.getKeySet();
-		for (String key : keySet) {
-			smw.data.add(new StringPairWritable(key, eGlobalTree.get(key)));
-		}
-		return smw;
-	}
+//	protected StringMapWritable getEList() {
+//		StringMapWritable smw = new StringMapWritable();
+//		Set<String> keySet = eGlobalTree.getKeySet();
+//		for (String key : keySet) {
+//			smw.data.add(new StringPairWritable(key, eGlobalTree.get(key)));
+//		}
+//		return smw;
+//	}
 
 	protected Watcher zooWatcher = new Watcher() {
 
@@ -180,6 +184,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 	}
 
 	protected void addANewServer(String ip) {
+		gServerStorageMap.put(ip, 0);
 		// TO DO
 		System.out.println("[MASTER] AddaNewServer Called!");
 		synchronized (gServerList) {
@@ -207,7 +212,6 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 				proxy = RpcIOCommons.getGServerProtocol(ip);
 				proxy.assignIndexServer(
 						new BPlusTreeStrStrWritable(vGlobalTree),
-						new BPlusTreeStrStrWritable(eGlobalTree),
 						new BPlusTreeStrStrWritable(dsPathIndex));
 				if (Debug.masterStopProxy)
 					RPC.stopProxy(proxy);
@@ -224,6 +228,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		if (Debug.printDetailedLog) {
 			Log_Utilities.genGMasterLog(Log_Utilities.LOG_HEADER_DEBUG, "removeDeadServer, ip="+ip.ip);
 		}
+		gServerStorageMap.remove(ip);
 		synchronized (gServerList) {
 			Set<GServerInfo> keys = gServerList.keySet();
 			for (GServerInfo info : keys) {
@@ -258,7 +263,6 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 							if (server.ip.equals(targetIP.ip)) {
 								proxy.assignIndexServer(
 										new BPlusTreeStrStrWritable(vGlobalTree),
-										new BPlusTreeStrStrWritable(eGlobalTree),
 										new BPlusTreeStrStrWritable(dsPathIndex));
 							} else {
 								proxy.announceIndexServer(targetIP.ip);
@@ -291,8 +295,9 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		gServerList = new HashMap<GServerInfo, ArrayList<GServerInfo>>();
 		vGlobalTree = new BPlusTree<String, String>(
 				SystemConf.getInstance().gServer_graph_index_global_size);
-		eGlobalTree = new BPlusTree<String, String>(
-				SystemConf.getInstance().gServer_graph_index_global_size);
+		gServerStorageMap = new HashMap<String, Integer>();
+//		eGlobalTree = new BPlusTree<String, String>(
+//				SystemConf.getInstance().gServer_graph_index_global_size);
 		dsPathIndex = new BPlusTree<String, String>(
 				SystemConf.getInstance().gServer_data_pathIndex_global_size);
 		zooKeeper = new ZkObtainer().getZooKeeper();
@@ -472,6 +477,21 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		}
 
 	}
+	
+	protected String findTargetGServer_Store_BatchVertex() {
+		String targetIP = "";
+		int currentStorageCount = Integer.MAX_VALUE;
+		for (String ip : gServerStorageMap.keySet()) {
+			if (targetIP.equals("")) {
+				targetIP = ip;
+			}
+			if (currentStorageCount > gServerStorageMap.get(ip)) {
+				targetIP = ip;
+				currentStorageCount = gServerStorageMap.get(ip);
+			}
+		}
+		return targetIP;
+	}
 
 	@Override
 	public void stopService() {
@@ -521,7 +541,6 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 				proxy = RpcIOCommons.getGServerProtocol(targerGSInfo.ip);
 				proxy.assignIndexServer(
 						new BPlusTreeStrStrWritable(vGlobalTree),
-						new BPlusTreeStrStrWritable(eGlobalTree),
 						new BPlusTreeStrStrWritable(dsPathIndex));
 				if (Debug.masterStopProxy)
 					RPC.stopProxy(proxy);
@@ -541,8 +560,10 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void insertVertexInfoToIndex(String vid, String ip) {
-
+		vGlobalTree.lockWrite();
 		vGlobalTree.insertOrUpdate(vid, ip);
+		gServerStorageMap.put(ip, gServerStorageMap.get(ip)+1);
+		vGlobalTree.unlockWrite();
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
 			for (GServerInfo info : keySet) {
@@ -561,33 +582,66 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			}
 		}
 	}
-
-	@Override
-	public void insertEdgeInfoToIndex(String eid, String ip) {
-
-		eGlobalTree.insertOrUpdate(eid, ip);
+	
+	protected void insertVertexInfoListToIndex(ArrayList<String> vids, String ip) {
+		vGlobalTree.lockWrite();
+		for (String id : vids) {
+			vGlobalTree.insertOrUpdate(id, ip);
+		}
+		gServerStorageMap.put(ip, gServerStorageMap.get(ip) + vids.size());
+		vGlobalTree.unlockWrite();
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
 			for (GServerInfo info : keySet) {
-				if (!info.ip.equals(ip)) {
 					try {
 						GServerProtocol proxy = RpcIOCommons
 								.getGServerProtocol(info.ip);
-						proxy.putEdgeInfoToIndex(eid, ip);
+						StringMapWritable writable = new StringMapWritable();
+						for (String id : vids) {
+							writable.data.add(new StringPairWritable(id, ip));
+						}
+						
+						proxy.putVListToIndex(writable);
+						
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
 					} catch (IOException e) {
 
 						e.printStackTrace();
 					}
-				}
 			}
 		}
 	}
 
+//	@Override
+//	public void insertEdgeInfoToIndex(String eid, String ip) {
+//
+//		eGlobalTree.insertOrUpdate(eid, ip);
+//		synchronized (gServerList) {
+//			Set<GServerInfo> keySet = gServerList.keySet();
+//			for (GServerInfo info : keySet) {
+//				if (!info.ip.equals(ip)) {
+//					try {
+//						GServerProtocol proxy = RpcIOCommons
+//								.getGServerProtocol(info.ip);
+//						proxy.putEdgeInfoToIndex(eid, ip);
+//						if (Debug.masterStopProxy)
+//							RPC.stopProxy(proxy);
+//					} catch (IOException e) {
+//
+//						e.printStackTrace();
+//					}
+//				}
+//			}
+//		}
+//	}
+
 	@Override
 	public void removeVertexFromIndex(String vid) {
+		vGlobalTree.lockWrite();
+		gServerStorageMap.put(vGlobalTree.get(vid), gServerStorageMap.get(vGlobalTree.get(vid))-1);
 		vGlobalTree.remove(vid);
+		vGlobalTree.unlockWrite();
 		synchronized (gServerList) {
 			Set<GServerInfo> keySet = gServerList.keySet();
 			for (GServerInfo info : keySet) {
@@ -604,27 +658,75 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			}
 		}
 	}
-
+	
 	@Override
-	public void removeEdgeFromIndex(String eid) {
+	public String storeVertexAndEdgeList(VertexCollectionWritable vdata,
+			EdgeCollectionWritable edata) {
+		//store the vertex first
+		//1. update the index
+		String targetIP = findTargetGServer_Store_BatchVertex();
+		ArrayList<String> vids = new ArrayList<>();
+		for (VertexInfo v : vdata.coll) {
+			vids.add(v.getId());
+		}
+		insertVertexInfoListToIndex(vids, targetIP);
+		
+		//2. send data to targetIP
+		try {
+			GServerProtocol proxy = RpcIOCommons.getGServerProtocol(targetIP);
+			proxy.storeVertexList(vdata);
+			if (Debug.masterStopProxy) {
+				RPC.stopProxy(proxy);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
-		eGlobalTree.remove(eid);
-		synchronized (gServerList) {
-			Set<GServerInfo> keySet = gServerList.keySet();
-			for (GServerInfo info : keySet) {
-				try {
-					GServerProtocol proxy = RpcIOCommons
-							.getGServerProtocol(info.ip);
-					proxy.deleteEdgeFromIndex(eid);
-					if (Debug.masterStopProxy)
-						RPC.stopProxy(proxy);
-				} catch (IOException e) {
-
-					e.printStackTrace();
+		//store the edge then
+		//1. group them by source_vertex_id
+		Map<String, ArrayList<EdgeInfo>> requestMap = new HashMap<>();
+		for (EdgeInfo e : edata.coll) {
+			String sourceV_IP = vGlobalTree.get(e.getSource_vertex_id());
+			if (requestMap.get(sourceV_IP) == null) {
+				requestMap.put(sourceV_IP, new ArrayList<EdgeInfo>());
+			}
+			requestMap.get(sourceV_IP).add(e);
+		}
+		for (String requestIP : requestMap.keySet()) {
+			try {
+				GServerProtocol proxy = RpcIOCommons.getGServerProtocol(requestIP);
+				EdgeCollectionWritable ecw = new EdgeCollectionWritable(requestMap.get(requestIP));
+				proxy.storeEdgeList(ecw);
+				if (Debug.masterStopProxy) {
+					RPC.stopProxy(proxy);
 				}
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
+		return "";
 	}
+
+//	@Override
+//	public void removeEdgeFromIndex(String eid) {
+//
+//		eGlobalTree.remove(eid);
+//		synchronized (gServerList) {
+//			Set<GServerInfo> keySet = gServerList.keySet();
+//			for (GServerInfo info : keySet) {
+//				try {
+//					GServerProtocol proxy = RpcIOCommons
+//							.getGServerProtocol(info.ip);
+//					proxy.deleteEdgeFromIndex(eid);
+//					if (Debug.masterStopProxy)
+//						RPC.stopProxy(proxy);
+//				} catch (IOException e) {
+//
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+//	}
 
 	@Override
 	public void notifyDataSet_Insert(String source, String dsID, String hdfsPath) {
@@ -694,15 +796,24 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public String findTargetGServer_StoreEdge(EdgeInfo information) {
+		String targetIP = vGlobalTree.get(information.getSource_vertex_id());
 
-		if (eGlobalTree.get(information.getId()) != null) {
-			return ErrorCode.EDGE_ALREADYEXIST;
-		}
-
-		if (vGlobalTree.get(information.getSource_vertex_id()) != null) {
-			return vGlobalTree.get(information.getSource_vertex_id());
-		} else {
+		if (targetIP != null) {
+			
+			GServerProtocol proxy;
+			try {
+				proxy = RpcIOCommons.getGServerProtocol(targetIP);
+				if (proxy.EdgeExist(information.getId())) {
+					return ErrorCode.EDGE_ALREADYEXIST;
+				} else {
+					return targetIP;
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			return null;
+		} else {
+			return ErrorCode.VERTEX_NOTEXIST;
 		}
 	}
 

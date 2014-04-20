@@ -125,7 +125,7 @@ public class GClient {
 						GServerProtocol gSProtocol = (GServerProtocol) RPC.waitForProxy(GServerProtocol.class, SystemConf.RPC_VERSION, address, new Configuration());
 						gSProtocols.put(resultIP, gSProtocol);
 					}
-					gSProtocols.get(resultIP).storeVertex(v, new EdgeCollectionWritable(edgeData.get(v.getId())));
+					//gSProtocols.get(resultIP).storeVertexAndUpdateIndex(v, new EdgeCollectionWritable(edgeData.get(v.getId())));
 					vLocationIndexTree.insertOrUpdate(v.getId(), resultIP);
 				} else {
 					System.err.println("[Client]" + SystemConf.getTime()

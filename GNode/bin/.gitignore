@@ -1,9 +1,8 @@
-/.DS_Store
 /data
 /ds
 /node
 /rpc
-/system
 /test
-/utilities
+/system
 /zk
+/utilities

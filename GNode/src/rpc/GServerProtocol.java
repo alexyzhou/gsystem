@@ -25,10 +25,10 @@ public interface GServerProtocol extends VersionedProtocol {
 	//Graph Data
 
 		//insert
-		public String storeVertex(VertexInfo vdata, EdgeCollectionWritable edata);
-		public String storeEdge(EdgeInfo edata);
-		public String storeVertexList(VertexCollectionWritable vdata,
-				EdgeCollectionWritable edata);
+		public String storeVertexAndUpdateIndex(VertexInfo vdata);
+		public String storeEdgeAndUpdateVertex(EdgeInfo edata);
+		public String storeVertexList(VertexCollectionWritable vdata);
+		public String storeEdgeList(EdgeCollectionWritable edata);
 		public float getMarkForTargetVertex(VertexInfo info);
 		//update
 		public boolean updateVertexInfo(VertexInfo info);
@@ -50,18 +50,19 @@ public interface GServerProtocol extends VersionedProtocol {
 		
 		//insert | update
 		public void putVertexInfoToIndex(String vid, String targetIP);
-		public void putEdgeInfoToIndex(String eid, String targetIP);
+		//public void putEdgeInfoToIndex(String eid, String targetIP);
 		public void putVListToIndex(StringMapWritable map);
-		public void putEListToIndex(StringMapWritable map);
+		//public void putEListToIndex(StringMapWritable map);
 		//remove
 		public void deleteVertexFromIndex(String vid);
-		public void deleteEdgeFromIndex(String eid);
+		//public void deleteEdgeFromIndex(String eid);
 		//query
 		public String queryVertexToServer(String vid);
-		public String queryEdgeToServer(String eid);
+		public String queryEdgeToServer(String eid, String sourceID);
+		public boolean EdgeExist(String id);
 		//manage
 		public double reportUsageMark();
-		public void assignIndexServer(BPlusTreeStrStrWritable vertexIndex, BPlusTreeStrStrWritable edgeIndex, BPlusTreeStrStrWritable dsPathIndex);
+		public void assignIndexServer(BPlusTreeStrStrWritable vertexIndex, BPlusTreeStrStrWritable dsPathIndex);
 		public void announceIndexServer(String ip);
 
 	//Graph Schema

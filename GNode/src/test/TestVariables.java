@@ -14,8 +14,8 @@ public class TestVariables {
 	
 	public static String DATASCHEMA_ID = "DS0001";
 	
-	public static final String TARGET_IP = "10.60.0.222";
-	public static final String MASTER_IP = "10.60.0.221";
+	public static final String TARGET_IP = "192.168.162.101";
+	public static final String MASTER_IP = "192.168.162.100";
 	
 	public static Graph_Schema get_VertexSchema() {
 		Graph_Schema vertexSchema = new Graph_Schema();

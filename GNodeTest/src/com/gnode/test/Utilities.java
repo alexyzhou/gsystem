@@ -11,7 +11,6 @@ import data.io.DS_DataType;
 import data.io.Data_Schema;
 import data.io.Graph_Schema;
 import data.io.VertexData;
-import data.io.VertexInfo;
 import data.writable.TraverseJobParameters;
 import data.writable.TraverseJobParameters.TraversalMethod;
 
@@ -118,7 +117,7 @@ public class Utilities {
 			
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(TestVariables.TARGET_IP);
-			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10);
+			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10, 0);
 			
 			String targetNode = gsProtocol.queryVertexToServer(nodeID);
 			

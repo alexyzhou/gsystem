@@ -6,7 +6,6 @@ import java.util.LinkedList;
 import data.writable.PrefixWritable;
 import data.writable.TraverseJobParameters;
 import data.writable.TraverseJobValuePairWritable;
-import data.writable.TraverseJobParameters.TraversalMethod;
 
 public class TraverseJobIntermediateResult {
 

@@ -14,7 +14,6 @@ import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 
-import com.neo4j.tj.other.Relation;
 import com.neo4j.tj.other.TraversalDefinition;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -22,9 +21,9 @@ import com.sun.jersey.api.client.WebResource;
 
 public class Utilities {
 
-	private static String SERVER_ROOT_URI = "http://10.60.0.221:7474/db/data/";
+	private static String SERVER_ROOT_URI = "http://127.0.0.1:7474/db/data/";
 
-	private static final int BATCH_MAX_TRANS = 5000;
+	private static final int BATCH_MAX_TRANS = 10000;
 
 	private static final String ATTR_NODE_ID = "ID";
 	private static final String ATTR_NODE_FLAG = "Restriction_Flag";
@@ -185,6 +184,52 @@ public class Utilities {
 			return appendStringByInsertNode(taskID.toString(), attris) + ",";
 		}
 	}
+	
+	private static String createNodeByCheckAndInsertAccount(String... attributes) {
+		if (nodeIDs.get(attributes[0]) != null) {
+			// already inserted this node
+			return nodeIDs.get(attributes[0]);
+		} else {
+			Map<String, String> attris = new HashMap<>();
+			attris.put(ATTR_NODE_ID, attributes[0]);
+			attris.put(ATTR_NODE_FLAG, attributes[1]);
+			attris.put(ATTR_NODE_CREATION_TIME, attributes[2]);
+			attris.put(ATTR_NODE_EMAILDOMAIN, attributes[3]);
+
+			// START SNIPPET: createNode
+	        final String nodeEntryPointUri = SERVER_ROOT_URI + "node";
+	        // http://localhost:7474/db/data/node
+
+	        WebResource resource = Client.create()
+	                .resource( nodeEntryPointUri);
+	        // POST {} to the node entry point URI
+	        ClientResponse response = resource.accept( MediaType.APPLICATION_JSON )
+	                .type( MediaType.APPLICATION_JSON )
+	                .entity(toJsonNameValuePairCollection(attris))
+	                .post( ClientResponse.class );
+
+	        final URI location = response.getLocation();
+	        response.close();
+	        
+	        String[] values = location.toString().split("/");
+	        nodeIDs.put(attributes[0], values[values.length-1]);
+	        
+	        return values[values.length-1];
+	        // END SNIPPET: createNode
+		}
+	}
+	
+	private static String toJsonNameValuePairCollection(Map<String, String> attris)
+    {
+		StringBuilder sb = new StringBuilder();
+		sb.append("{");
+		for (Map.Entry<String, String> entry : attris.entrySet()) {
+			sb.append(String.format( " \"%s\" : \"%s\" ,", entry.getKey(), entry.getValue() ));
+		}
+		sb.deleteCharAt(sb.length() - 1);
+		sb.append("}");
+        return sb.toString();
+    }
 
 	private static String appendStringByInsertTransaction(String sourceID,
 			String desID, String... attributes) {
@@ -226,14 +271,18 @@ public class Utilities {
 
 				String[] values = line.split(",");
 				// sender
-				sbu.append(appendStringByCheckAndInsertAccount(values[1],
-						values[2], values[3], values[4]));
+//				sbu.append(appendStringByCheckAndInsertAccount(values[1],
+//						values[2], values[3], values[4]));
+				String senderID = createNodeByCheckAndInsertAccount(values[1],
+						values[2], values[3], values[4]);
 				// receiver
-				sbu.append(appendStringByCheckAndInsertAccount(values[5],
-						values[6], values[7], values[8]));
+//				sbu.append(appendStringByCheckAndInsertAccount(values[5],
+//						values[6], values[7], values[8]));
+				String receiverID = createNodeByCheckAndInsertAccount(values[5],
+						values[6], values[7], values[8]);
 				// transaction
 				sbu.append(appendStringByInsertTransaction(
-						nodeIDs.get(values[1]), nodeIDs.get(values[5]),
+						senderID, receiverID,
 						values[0], values[9], values[10], values[11],
 						values[12], values[13], values[14], values[15]));
 
@@ -269,7 +318,7 @@ public class Utilities {
 		t.setUniqueness(TraversalDefinition.NODE);
 		t.setMaxDepth(maxDepth);
 		t.setReturnFilter(TraversalDefinition.ALL);
-		t.setRelationships(new Relation("ATTR_EDGE_TYPE_TRAN", Relation.OUT));
+		//t.setRelationships(new Relation("ATTR_EDGE_TYPE_TRAN", Relation.OUT));
 		// END SNIPPET: traversalDesc
 
 		// START SNIPPET: traverse
@@ -295,11 +344,15 @@ public class Utilities {
 		final String nodeEntryPointUri = SERVER_ROOT_URI + "node/" + nodeID;
 		// http://localhost:7474/db/data/node/30
 
-		WebResource resource = Client.create().resource(nodeEntryPointUri);
-		// POST {} to the node entry point URI
-		ClientResponse response = resource.accept(MediaType.APPLICATION_JSON)
-				.type(MediaType.APPLICATION_JSON).entity("{}")
-				.get(ClientResponse.class);
+//		WebResource resource = Client.create().resource(nodeEntryPointUri);
+//		// POST {} to the node entry point URI
+//		ClientResponse response = resource.accept(MediaType.APPLICATION_JSON)
+//				.type(MediaType.APPLICATION_JSON).entity("{}")
+//				.get(ClientResponse.class);
+		
+		WebResource resource = Client.create()
+                .resource( SERVER_ROOT_URI );
+        ClientResponse response = resource.accept(MediaType.APPLICATION_JSON).get( ClientResponse.class );
 
 		System.out.println(String.format(
 				"POST to [%s], status code [%d], content [%s]",

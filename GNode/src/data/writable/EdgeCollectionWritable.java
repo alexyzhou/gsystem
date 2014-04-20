@@ -31,7 +31,6 @@ public class EdgeCollectionWritable implements Writable, Serializable {
 	public void readFields(DataInput read) throws IOException {
 		// TODO Auto-generated method stub
 		int num = read.readInt();
-		System.out.println("Edge Count Received " + num);
 		for (int i = 0; i < num; i++) {
 			EdgeInfo e = new EdgeInfo();
 			e.readFields(read);
@@ -43,7 +42,6 @@ public class EdgeCollectionWritable implements Writable, Serializable {
 	public void write(DataOutput write) throws IOException {
 		// TODO Auto-generated method stub
 		write.writeInt(coll.size());
-		System.out.println("Edge Count Write" + coll.size());
 		for(EdgeInfo e: coll) {
 			e.write(write);
 		}

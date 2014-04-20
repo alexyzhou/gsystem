@@ -19,7 +19,7 @@ public class LRULinkedHashMap<K, V> extends LinkedHashMap<K, V> {
 	}
 
 	@Override
-	protected boolean removeEldestEntry(java.util.Map.Entry eldest) {
+	protected boolean removeEldestEntry(java.util.Map.Entry<K, V> eldest) {
 		// TODO Auto-generated method stub
 		return size() > this.maxCapacity;
 	}

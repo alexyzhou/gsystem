@@ -15,14 +15,13 @@ import rpc.RpcIOCommons;
 import system.SystemConf;
 import data.io.DS_DataType;
 import data.io.DataPointers_Entity;
+import data.io.DataPointers_Entity._DSInfo;
 import data.io.Data_Schema;
 import data.io.EdgeInfo;
 import data.io.Graph_Schema;
+import data.io.Graph_Schema.Attribute;
 import data.io.VertexData;
 import data.io.VertexInfo;
-import data.io.DataPointers_Entity._DSInfo;
-import data.io.Graph_Schema.Attribute;
-import data.writable.EdgeCollectionWritable;
 import ds.index.BinarySearchStringIndex;
 
 public class GTest926 {
@@ -268,7 +267,7 @@ public class GTest926 {
 				if (resultIP != "") {
 					GServerProtocol gsProtocol = RpcIOCommons
 							.getGServerProtocol(resultIP);
-					gsProtocol.storeVertex(v, new EdgeCollectionWritable());
+					gsProtocol.storeVertexAndUpdateIndex(v);
 				} else {
 					System.err.println("[Client]" + SystemConf.getTime()
 							+ "[ERROR] Vertex " + v.getId()
@@ -284,7 +283,7 @@ public class GTest926 {
 				if (resultIP != "") {
 					GServerProtocol gsProtocol = RpcIOCommons
 							.getGServerProtocol(resultIP);
-					gsProtocol.storeEdge(e);
+					gsProtocol.storeEdgeAndUpdateVertex(e);
 				} else {
 					System.err.println("[Client]" + SystemConf.getTime()
 							+ "[ERROR] Vertex " + e.getId()
@@ -347,7 +346,7 @@ public class GTest926 {
 		System.out.println("Now try to query Graph!");
 
 		String vertexIDToQuery = "148926";
-		String edgeIDToQuery = "1000179";
+		//String edgeIDToQuery = "1000179";
 		String gServerIP = "10.60.0.223";
 
 		try {

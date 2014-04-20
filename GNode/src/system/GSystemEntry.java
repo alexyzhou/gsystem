@@ -4,10 +4,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.util.Properties;
-
-import org.apache.hadoop.conf.Configuration;
 
 import node.GMaster;
 import node.GServer;
@@ -62,7 +59,7 @@ public class GSystemEntry {
 		}
 
 		try {
-			systemInit();
+			systemInit(args[0]);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -73,11 +70,11 @@ public class GSystemEntry {
 		}
 	}
 
-	private static void systemInit() throws InterruptedException,
+	private static void systemInit(String confPath) throws InterruptedException,
 			FileNotFoundException {
 
 		Properties prop = new Properties();
-		InputStream in = new FileInputStream("systemconf.properties");
+		InputStream in = new FileInputStream(confPath);
 		try {
 			prop.load(in);
 
