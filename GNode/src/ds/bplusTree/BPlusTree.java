@@ -141,7 +141,7 @@ public class BPlusTree<T extends Comparable<T>, V> implements B<T,V> {
 			}
 		}).start();
 		
-		System.out.println("Fin!");
+		//System.out.println("Fin!");
 		
 	}
 

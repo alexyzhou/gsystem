@@ -20,6 +20,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
+import test.Debug;
 import data.io.Data_Schema;
 import data.io.Data_Schema.ColumnDescription;
 import ds.index.BinarySearchStringIndex;
@@ -108,6 +109,7 @@ public class HDFS_Utilities {
 
 			FileStatus files[] = fs.listStatus(dst);
 			for (FileStatus file : files) {
+				if (Debug.printIOLog)
 				System.out.println(file.getPath());
 			}
 
@@ -204,6 +206,7 @@ public class HDFS_Utilities {
 				BufferedReader br = new BufferedReader(new InputStreamReader(
 						inputStream));
 				String line = br.readLine();
+				if (Debug.printIOLog)
 				System.out.println("HDFS Dataset Read line " + line);
 				if (ds.getSeperator() != '\0') {
 					String[] values = line.split(ds.getSeperator() + "");

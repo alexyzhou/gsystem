@@ -13,7 +13,9 @@ import node.GServer;
 
 import org.apache.hadoop.io.Writable;
 
+import test.Debug;
 import utilities.HDFS_Utilities;
+import utilities.Log_Utilities;
 import data.io.DataPointers_Entity._DSInfo;
 import data.io.VertexInfo._EdgeInfo;
 
@@ -46,7 +48,8 @@ public class VertexData implements Writable {
 		HashMap<String, HashMap<Long, List<String>>> queries = new HashMap<>();
 		for (data.io.Graph_Schema.Attribute attri : schema.getAttributes()) {
 			_DSInfo dsi = this.pointer.data.get(attri.name);
-			System.out.println("DSI GET " + dsi.attriName);
+			
+			Log_Utilities.printGServerLog("ReadVertexData", "DSI GET " + dsi.attriName);
 			if (queries.get(dsi.dsId + "@" + dsi.dsSchemaId) == null) {
 				HashMap<Long, List<String>> dsQueries = new HashMap<>();
 				ArrayList<String> attriQueries = new ArrayList<>();
@@ -66,7 +69,7 @@ public class VertexData implements Writable {
 			}
 		}
 		for (String target : queries.keySet()) {
-			System.out.println("target "+ target);
+			Log_Utilities.printGServerLog("ReadVertexData", "target "+ target);
 			String[] targets = target.split("@");
 			String fsPath = node.getDataSetPath(targets[0]);
 			Data_Schema ds = node.getDataSchema(targets[1]);
@@ -79,7 +82,7 @@ public class VertexData implements Writable {
 						for (data.io.Graph_Schema.Attribute attri : schema
 								.getAttributes()) {
 							if (pointer.data.get(attri.name).attriName.equals(key)) {
-								System.out.println("INSERT TO DATA " + attri.name + "@" + result.get(key));
+								Log_Utilities.printGServerLog("ReadVertexData", "INSERT TO DATA " + attri.name + "@" + result.get(key));
 								this.data.put(attri.name, result.get(key));
 							}
 						}

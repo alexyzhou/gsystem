@@ -6,4 +6,5 @@ public class Debug {
 	public static boolean serverStopProxy = false;
 	
 	public static boolean printDetailedLog = false;
+	public static boolean printIOLog = false;
 }

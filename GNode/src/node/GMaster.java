@@ -113,7 +113,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 			if (event.getType() == EventType.NodeChildrenChanged) {
 				// Serverlist changed!
-				System.out.println("[MASTER] NodeChildrenChanged!");
+				Log_Utilities.printGMasterLog("MASTER", "[MASTER] NodeChildrenChanged!");
 				scanServerList(event.getPath());
 			}
 		}
@@ -186,7 +186,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 	protected void addANewServer(String ip) {
 		gServerStorageMap.put(ip, 0);
 		// TO DO
-		System.out.println("[MASTER] AddaNewServer Called!");
+		Log_Utilities.printGMasterLog("MASTER", "AddaNewServer Called!");
 		synchronized (gServerList) {
 			Set<GServerInfo> keys = gServerList.keySet();
 			for (GServerInfo info : keys) {
@@ -198,6 +198,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						proxy.announceIndexServer(info.ip);
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
+						RpcIOCommons.freeGServerProtocol(ip);
 						return;
 					} catch (IOException e) {
 
@@ -215,6 +216,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						new BPlusTreeStrStrWritable(dsPathIndex));
 				if (Debug.masterStopProxy)
 					RPC.stopProxy(proxy);
+				RpcIOCommons.freeGServerProtocol(ip);
 				return;
 			} catch (IOException e) {
 
@@ -225,9 +227,9 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	protected void removeDeadServer(GServerInfo ip) {
 		// TO DO
-		if (Debug.printDetailedLog) {
-			Log_Utilities.genGMasterLog(Log_Utilities.LOG_HEADER_DEBUG, "removeDeadServer, ip="+ip.ip);
-		}
+
+			Log_Utilities.printGMasterLog(Log_Utilities.LOG_HEADER_DEBUG, "removeDeadServer, ip="+ip.ip);
+		
 		gServerStorageMap.remove(ip);
 		synchronized (gServerList) {
 			Set<GServerInfo> keys = gServerList.keySet();
@@ -247,6 +249,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 							}
 							if (Debug.masterStopProxy)
 								RPC.stopProxy(proxy);
+							RpcIOCommons.freeGServerProtocol(server.ip);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
@@ -267,6 +270,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 							} else {
 								proxy.announceIndexServer(targetIP.ip);
 							}
+							RpcIOCommons.freeGServerProtocol(server.ip);
 						} catch (IOException e) {
 
 							e.printStackTrace();
@@ -363,18 +367,15 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		isRunning = true;
 		int loopCount = 0;
 		while (isRunning == true) {
-			System.out
-					.println("[" + SystemConf.getTime() + "][MASTER] Running");
-			System.out.println("[" + SystemConf.getTime()
-					+ "][MASTER] gServer List:");
+			Log_Utilities.printGMasterRuntimeLog("Running");
+			
+			Log_Utilities.printGMasterRuntimeLog("gServer List:");
 			synchronized (gServerList) {
 				Set<GServerInfo> keys = gServerList.keySet();
 				for (GServerInfo key : keys) {
-					System.out.println("[" + SystemConf.getTime()
-							+ "][MASTER] gIndexServer IP:" + key.ip);
+					Log_Utilities.printGMasterRuntimeLog("gIndexServer IP:" + key.ip);
 					for (GServerInfo value : gServerList.get(key)) {
-						System.out.println("[" + SystemConf.getTime()
-								+ "][MASTER][" + key.ip + "] GServer"
+						Log_Utilities.printGMasterRuntimeLog("[" + key.ip + "] GServer"
 								+ value.ip);
 					}
 				}
@@ -425,36 +426,33 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 		synchronized (gServerList) {
 			Set<GServerInfo> keys = gServerList.keySet();
 			for (GServerInfo key : keys) {
-				if (Debug.findTargetGServer_Store)
-					System.out.println("[" + SystemConf.getTime()
-							+ "][MASTER] FindTarget + Now In Keys");
+				
+					Log_Utilities.printGMasterLog("MASTER", "FindTarget + Now In Keys");
 				try {
 					GServerProtocol proxy = RpcIOCommons
 							.getGServerProtocol(key.ip);
 					float mark = proxy.getMarkForTargetVertex(information);
-					if (Debug.findTargetGServer_Store)
-						System.out.println("[" + SystemConf.getTime()
-								+ "][MASTER] FindTarget + key Mark:" + mark);
+					
+						Log_Utilities.printGMasterLog("MASTER", "FindTarget + key Mark:" + mark);
 					if (maxMark < mark) {
 						maxMark = mark;
 						targetServerIP = key.ip;
 					}
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
+					RpcIOCommons.freeGServerProtocol(key.ip);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 				for (GServerInfo server : gServerList.get(key)) {
-					if (Debug.findTargetGServer_Store)
-						System.out.println("[" + SystemConf.getTime()
-								+ "][MASTER] FindTarget + Now In Servers");
+					
+						Log_Utilities.printGMasterLog("MASTER", "FindTarget + Now In Servers");
 					try {
 						GServerProtocol proxy = RpcIOCommons
 								.getGServerProtocol(server.ip);
 						float mark = proxy.getMarkForTargetVertex(information);
-						if (Debug.findTargetGServer_Store)
-							System.out.println("[" + SystemConf.getTime()
-									+ "][MASTER] FindTarget + Servers Mark:"
+						
+							Log_Utilities.printGMasterLog("MASTER", "FindTarget + Servers Mark:"
 									+ mark);
 						if (maxMark < mark) {
 							maxMark = mark;
@@ -462,6 +460,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						}
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
+						RpcIOCommons.freeGServerProtocol(server.ip);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -501,8 +500,8 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 
 	@Override
 	public void requestToChangeIndexServer(String source_ip) {
-		if (Debug.printDetailedLog)
-			System.out.println("[" + SystemConf.getTime()
+		
+			Log_Utilities.printGMasterLog("MASTER", "[" + SystemConf.getTime()
 					+ "][MASTER] Request To Change Index Server! " + source_ip);
 
 		double minUsage = Double.MAX_VALUE;
@@ -520,6 +519,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					}
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
+					RpcIOCommons.freeGServerProtocol(server.ip);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -544,11 +544,13 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						new BPlusTreeStrStrWritable(dsPathIndex));
 				if (Debug.masterStopProxy)
 					RPC.stopProxy(proxy);
+				RpcIOCommons.freeGServerProtocol(targerGSInfo.ip);
 				for (GServerInfo info : array) {
 					proxy = RpcIOCommons.getGServerProtocol(info.ip);
 					proxy.announceIndexServer(targerGSInfo.ip);
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
+					RpcIOCommons.freeGServerProtocol(info.ip);
 				}
 			} catch (IOException e) {
 
@@ -574,6 +576,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						proxy.putVertexInfoToIndex(vid, ip);
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
+						RpcIOCommons.freeGServerProtocol(info.ip);
 					} catch (IOException e) {
 
 						e.printStackTrace();
@@ -605,6 +608,8 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
+						RpcIOCommons.freeGServerProtocol(info.ip);
+						
 					} catch (IOException e) {
 
 						e.printStackTrace();
@@ -651,6 +656,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 					proxy.deleteVertexFromIndex(vid);
 					if (Debug.masterStopProxy)
 						RPC.stopProxy(proxy);
+					RpcIOCommons.freeGServerProtocol(info.ip);
 				} catch (IOException e) {
 
 					e.printStackTrace();
@@ -663,21 +669,28 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 	public String storeVertexAndEdgeList(VertexCollectionWritable vdata,
 			EdgeCollectionWritable edata) {
 		//store the vertex first
-		//1. update the index
-		String targetIP = findTargetGServer_Store_BatchVertex();
+		//0. filter the vertex first
+		VertexCollectionWritable nData = new VertexCollectionWritable();
 		ArrayList<String> vids = new ArrayList<>();
 		for (VertexInfo v : vdata.coll) {
-			vids.add(v.getId());
+			if (vGlobalTree.get(v.getId()) == null) {
+				vids.add(v.getId());
+				nData.coll.add(v);
+			}
 		}
+		
+		//1. update the index
+		String targetIP = findTargetGServer_Store_BatchVertex();
 		insertVertexInfoListToIndex(vids, targetIP);
 		
 		//2. send data to targetIP
 		try {
 			GServerProtocol proxy = RpcIOCommons.getGServerProtocol(targetIP);
-			proxy.storeVertexList(vdata);
+			proxy.storeVertexList(nData);
 			if (Debug.masterStopProxy) {
 				RPC.stopProxy(proxy);
 			}
+			RpcIOCommons.freeGServerProtocol(targetIP);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -700,6 +713,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 				if (Debug.masterStopProxy) {
 					RPC.stopProxy(proxy);
 				}
+				RpcIOCommons.freeGServerProtocol(requestIP);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -741,6 +755,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						proxy.insertDataSet_Sync(dsID, hdfsPath);
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
+						RpcIOCommons.freeGServerProtocol(info.ip);
 					} catch (IOException e) {
 
 						e.printStackTrace();
@@ -763,6 +778,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						proxy.removeDataSet_Sync(dsID);
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
+						RpcIOCommons.freeGServerProtocol(info.ip);
 					} catch (IOException e) {
 
 						e.printStackTrace();
@@ -785,6 +801,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 						proxy.removeDSIndex_Sync(dsID, dschemaID, attriName);
 						if (Debug.masterStopProxy)
 							RPC.stopProxy(proxy);
+						RpcIOCommons.freeGServerProtocol(info.ip);
 					} catch (IOException e) {
 
 						e.printStackTrace();
@@ -803,7 +820,9 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			GServerProtocol proxy;
 			try {
 				proxy = RpcIOCommons.getGServerProtocol(targetIP);
-				if (proxy.EdgeExist(information.getId())) {
+				boolean result = proxy.EdgeExist(information.getId());
+				RpcIOCommons.freeGServerProtocol(targetIP);
+				if (result == true) {
 					return ErrorCode.EDGE_ALREADYEXIST;
 				} else {
 					return targetIP;
@@ -834,7 +853,7 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 							minUsage = usage;
 							targetIP = node.ip;
 						}
-
+						RpcIOCommons.freeGServerProtocol(node.ip);
 					}
 				}
 
@@ -842,7 +861,9 @@ public class GMaster extends GNode implements Runnable, GMasterProtocol {
 			if (targetIP != null) {
 				GServerProtocol proxy = RpcIOCommons
 						.getGServerProtocol(targetIP);
-				return proxy.createDSIndex(dsID, dschemaID, attriName);
+				String result = proxy.createDSIndex(dsID, dschemaID, attriName);
+				RpcIOCommons.freeGServerProtocol(targetIP);
+				return result;
 			}
 		} catch (IOException e) {
 			return e.getLocalizedMessage();
