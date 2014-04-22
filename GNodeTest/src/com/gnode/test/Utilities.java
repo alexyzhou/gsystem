@@ -24,6 +24,7 @@ public class Utilities {
 		try {
 			gsProtocol = RpcIOCommons.getGServerProtocol(TestVariables.TARGET_IP);
 			gsProtocol.insertDataSet(id, path);
+			RpcIOCommons.freeGServerProtocol(TestVariables.TARGET_IP);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -78,6 +79,7 @@ public class Utilities {
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(TestVariables.TARGET_IP);
 			gsProtocol.insertOrUpdateDataSchema(schema.getId(), schema);
+			RpcIOCommons.freeGServerProtocol(TestVariables.TARGET_IP);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -98,6 +100,7 @@ public class Utilities {
 					.getGServerProtocol(TestVariables.TARGET_IP);
 			gsProtocol.insertOrUpdateSchema(TestVariables.GRAPH_ID, vertexSchema);
 			gsProtocol.insertOrUpdateSchema(TestVariables.GRAPH_ID, edgeSchema);
+			RpcIOCommons.freeGServerProtocol(TestVariables.TARGET_IP);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -108,7 +111,7 @@ public class Utilities {
 		return true;
 	}
 	
-	protected static void traverseGraph_Test(String startID) {
+	protected static void traverseGraph_Test(String startID, String level) {
 		// BFS
 		System.out.println("Now try to traverse graph!");
 		String nodeID = startID;
@@ -117,7 +120,7 @@ public class Utilities {
 			
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(TestVariables.TARGET_IP);
-			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10, 0);
+			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, Integer.parseInt(level), 0);
 			
 			String targetNode = gsProtocol.queryVertexToServer(nodeID);
 			
@@ -126,12 +129,13 @@ public class Utilities {
 					GServerProtocol gServerPro = RpcIOCommons
 							.getGServerProtocol(targetNode);
 					gServerPro.traverseGraph_Async(nodeID, param);
+					RpcIOCommons.freeGServerProtocol(targetNode);
 				} else {
 					gsProtocol.traverseGraph_Async(nodeID, param);
 				}
 				System.out.println("traverse graph succeed!");
 			}
-			
+			RpcIOCommons.freeGServerProtocol(TestVariables.TARGET_IP);
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.out.println("traverse graph failed!");
@@ -153,7 +157,7 @@ public class Utilities {
 			//System.err.println(info.getSchema_id());
 			VertexData data = gsProtocol.getVertexData(vertexIDToQuery);
 			System.err.println(data.getData().get("creation_time"));
-			
+			RpcIOCommons.freeGServerProtocol(gServerIP);
 			//For Edge
 			//TODO
 		} catch (IOException e) {
