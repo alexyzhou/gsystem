@@ -102,6 +102,7 @@ public class ImporterMapper extends Mapper<LongWritable, Text, LongWritable, Tex
 		try {
 			GMasterProtocol proxy = RpcIOCommons.getMasterProxy();
 			proxy.storeVertexAndEdgeList(vColl, eColl);
+			RpcIOCommons.freeMasterProxy();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -184,10 +185,12 @@ public class ImporterMapper extends Mapper<LongWritable, Text, LongWritable, Tex
 		GMasterProtocol mProtocol = RpcIOCommons.getMasterProxy();
 		
 		String resultIP = mProtocol.findTargetGServer_Store(v);
+		RpcIOCommons.freeMasterProxy();
 		if (!(resultIP == null || resultIP.equals(ErrorCode.VERTEX_ALREADYEXIST) || resultIP.equals(""))) {
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(resultIP);
 			gsProtocol.storeVertexAndUpdateIndex(v);
+			RpcIOCommons.freeGServerProtocol(resultIP);
 			//return "Succeed With "+v.getId();
 		} else {
 			System.err.println("[Client]" + SystemConf.getTime()
@@ -203,11 +206,12 @@ public class ImporterMapper extends Mapper<LongWritable, Text, LongWritable, Tex
 		
 		GMasterProtocol mProtocol = RpcIOCommons.getMasterProxy();
 		String resultIP = mProtocol.findTargetGServer_StoreEdge(e);
-		
+		RpcIOCommons.freeMasterProxy();
 		if (!(resultIP == null || resultIP.equals(ErrorCode.EDGE_ALREADYEXIST) || resultIP.equals(""))) {
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(resultIP);
 			gsProtocol.storeEdgeAndUpdateVertex(e);
+			RpcIOCommons.freeGServerProtocol(resultIP);
 			//return "Succeed E Wtih "+e.getId();
 		} else {
 			System.err.println("[Client]" + SystemConf.getTime()
