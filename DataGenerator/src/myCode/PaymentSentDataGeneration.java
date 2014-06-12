@@ -16,7 +16,7 @@ public class PaymentSentDataGeneration {
 		this.num = num;
 	}
 
-	private List<Long> list = new ArrayList<Long>();
+	//private List<Long> list = new ArrayList<Long>();
 
 	private final static char CHAR = ',';
 
@@ -34,11 +34,15 @@ public class PaymentSentDataGeneration {
 	Random random = new Random();
 
 	public void setUp() throws IOException {
-		for (long i = 10000000; i < 10000000 + num; i++) {
+		/*for (long i = 10000000; i < 10000000 + num; i++) {
 			list.add(i + 1);
-		}
+		}*/
 		output = new FileWriter(file);
 		boutput = new BufferedWriter(output);
+	}
+	
+	protected Long listget(int value) {
+		return 10000001l+value;
 	}
 
 	protected void writeOneTrans(int senderIDIndex) throws IOException {
@@ -49,7 +53,7 @@ public class PaymentSentDataGeneration {
 
 		// SENDER ID
 		// cust_id good
-		Long cust_id = list.get(senderIDIndex);
+		Long cust_id = 10000001l+senderIDIndex;
 		sb.append(cust_id).append(CHAR); // cust_id
 
 		// -- (RECEIVER ID)
@@ -58,7 +62,7 @@ public class PaymentSentDataGeneration {
 			nextInt = random.nextInt(1000) + 1;
 		}
 		int cp_index = (nextInt + senderIDIndex) % num;
-		Long rece_id = list.get(cp_index);
+		Long rece_id = 10000001l+cp_index;
 
 		// Is sender already existing?
 
@@ -126,21 +130,21 @@ public class PaymentSentDataGeneration {
 		if (ip_index % 5 == 1) {
 			ip_index = random.nextInt(ip_index + 1);
 		}
-		sb.append(list.get(ip_index)).append(CHAR); // sndr_last_login_ip
+		sb.append(listget(ip_index)).append(CHAR); // sndr_last_login_ip
 
 		// reciever ip
 		ip_index = cp_index;
 		if (ip_index % 6 == 1) {
 			ip_index = random.nextInt(ip_index + 1);
 		}
-		sb.append(list.get(ip_index)).append(CHAR); // rcvr_last_login_ip
+		sb.append(listget(ip_index)).append(CHAR); // rcvr_last_login_ip
 
 		// pymt_amt_usd, random is ok
 		sb.append(random.nextInt(10000)).append(CHAR); // pymt_amt_usd
 
 		// these two columns are not used
 		sb.append(senderIDIndex % 10 == 1 ? 1 : 0).append(CHAR); // cc_used
-		sb.append(list.get(senderIDIndex) + 2000).append(CHAR); // cc_id
+		sb.append(listget(senderIDIndex) + 2000).append(CHAR); // cc_id
 
 		// is buyer bad
 		int is_bad_random = random.nextInt(senderIDIndex + 1);
@@ -157,9 +161,20 @@ public class PaymentSentDataGeneration {
 		// "yyyy-MM-dd HH:mm:ss");
 
 		transIDIncrement = 0;
+		
+		int percent = 0;
+		int percentOne = (int) ((float)num * 0.01f);
+		int percentCount = 0;
 
 		for (int i = 0; i < num; i++) {
 			// for every sender, the count of trans maybe 0~50
+			percentCount++;
+			if (percentCount == percentOne) {
+				percent++;
+				System.out.println(percent+"%");
+				percentCount=0;
+			}
+			
 			int transSum = random.nextInt(50);
 			for (int j = 0; j < transSum; j++) {
 				// for every trans
@@ -179,18 +194,26 @@ public class PaymentSentDataGeneration {
 	 * transactions is 25 * args[1]
 	 */
 	public static void main(String[] args) throws Exception {
+		
+		if (args.length != 2) {
+			System.out.println("Usage: java -jar generator.jar <path> <count>");
+			//return;
+		}
+		
 		String filename = "/Users/alex/Documents/exData/";
+		//String filename = args[0];
 
-		for (int i = 0; i < 5; i++) {
+		//for (int i = 0; i < 5; i++) {
 
-			int count_customers = 20000*(i+1);
-
+			//int count_customers = Integer.parseInt(args[1]);
+			int count_customers = Integer.parseInt("500000");
+		
 			PaymentSentDataGeneration dg = new PaymentSentDataGeneration(
 					filename + count_customers + ".csv", count_customers);
 			dg.setUp();
 			dg.genData();
 			dg.close();
-		}
+		//}
 	}
 
 }
