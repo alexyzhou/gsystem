@@ -2,15 +2,21 @@ package com.gnode.test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.UUID;
 
 import rpc.GServerProtocol;
 import rpc.RpcIOCommons;
 import test.TestVariables;
+import utilities.Net_Utilities;
+
+import com.gnode.test.rpc.GClientRPC;
+
 import data.io.DS_DataType;
 import data.io.Data_Schema;
 import data.io.Graph_Schema;
 import data.io.VertexData;
+import data.io.VertexInfo;
 import data.writable.TraverseJobParameters;
 import data.writable.TraverseJobParameters.TraversalMethod;
 
@@ -111,7 +117,7 @@ public class Utilities {
 		return true;
 	}
 	
-	protected static void traverseGraph_Test(String startID, String level) {
+	protected static void traverseGraph_Test(String startID, String level, String target, String isDetailed) {
 		// BFS
 		System.out.println("Now try to traverse graph!");
 		String nodeID = startID;
@@ -120,7 +126,9 @@ public class Utilities {
 			
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(TestVariables.TARGET_IP);
-			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, Integer.parseInt(level), 0);
+			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, Integer.parseInt(level), 0, Net_Utilities.obtainLocalIP());
+			
+			GClientRPC.getInstance(new Date().getTime(), target, isDetailed);
 			
 			String targetNode = gsProtocol.queryVertexToServer(nodeID);
 			
@@ -155,8 +163,9 @@ public class Utilities {
 			GServerProtocol gsProtocol = RpcIOCommons.getGServerProtocol(gServerIP);
 			//VertexInfo info = gsProtocol.getVertexInfo(vertexIDToQuery);
 			//System.err.println(info.getSchema_id());
-			VertexData data = gsProtocol.getVertexData(vertexIDToQuery);
-			System.err.println(data.getData().get("creation_time"));
+			VertexInfo data = gsProtocol.getVertexInfo(vertexIDToQuery);
+			System.err.println(data.getSchema_id());
+			//System.err.println(data.getData().get("creation_time"));
 			RpcIOCommons.freeGServerProtocol(gServerIP);
 			//For Edge
 			//TODO
