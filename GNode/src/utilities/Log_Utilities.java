@@ -1,9 +1,17 @@
 package utilities;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Date;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RPC;
+
 import data.io.TraverseJobIntermediateResult;
+import rpc.GClientProtocol;
+import rpc.GServerProtocol;
+import system.GClient;
 import system.SystemConf;
 import test.Debug;
 
@@ -28,11 +36,31 @@ public class Log_Utilities {
 		System.out.println("[" + SystemConf.getTime()
 				+ "][gSERVER][Graph Traversal] Result: "
 				+ tempResult.genResultString());
+//		System.out
+//				.println("["
+//						+ SystemConf.getTime()
+//						+ "][gSERVER][Graph Traversal] [********TimeCost(ms)********]: "
+//						+ ((new Date().getTime()) - tempResult.param.beginTime));
+		
+		//notify the client
+		
 		System.out
-				.println("["
-						+ SystemConf.getTime()
-						+ "][gSERVER][Graph Traversal] [********TimeCost(ms)********]: "
-						+ ((new Date().getTime()) - tempResult.param.beginTime));
+		.println("["
+				+ SystemConf.getTime()
+				+ "][gSERVER][Graph Traversal] [Traverse NotifyFinish]: ");
+		
+		InetSocketAddress address = new InetSocketAddress(tempResult.param.client_ip,
+				SystemConf.getInstance().RPC_GCLIENT_PORT);
+		GClientProtocol proxy;
+		try {
+			proxy = (GClientProtocol) RPC.waitForProxy(
+					GClientProtocol.class, SystemConf.RPC_VERSION, address,
+					new Configuration());
+			proxy.traverseDidFinished(tempResult.genResultString());
+			RPC.stopProxy(proxy);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public static void printGMasterLog(String header, String log) {

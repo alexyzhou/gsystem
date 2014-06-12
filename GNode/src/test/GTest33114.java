@@ -1,5 +1,6 @@
 package test;
 
+import java.awt.SystemColor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -7,6 +8,8 @@ import java.util.UUID;
 
 import rpc.GServerProtocol;
 import rpc.RpcIOCommons;
+import system.SystemConf;
+import utilities.Net_Utilities;
 import data.io.DS_DataType;
 import data.io.Data_Schema;
 import data.io.Graph_Schema;
@@ -118,7 +121,7 @@ public class GTest33114 {
 			
 			GServerProtocol gsProtocol = RpcIOCommons
 					.getGServerProtocol(TestVariables.TARGET_IP);
-			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10, (new Date()).getTime());
+			TraverseJobParameters param = new TraverseJobParameters(UUID.randomUUID(), TraversalMethod.DFS, 10, (new Date()).getTime(), Net_Utilities.obtainLocalIP());
 			
 			String targetNode = gsProtocol.queryVertexToServer(nodeID);
 			

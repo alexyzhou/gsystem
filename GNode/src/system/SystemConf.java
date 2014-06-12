@@ -78,6 +78,7 @@ public class SystemConf {
 	//for RPC
 	public int RPC_GSERVER_PORT = 8889;
 	public int RPC_GMASTER_PORT = 8888;
+	public int RPC_GCLIENT_PORT = 8890;
 	public static int RPC_VERSION = 0;
 	
 }

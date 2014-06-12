@@ -1100,7 +1100,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 			Log_Utilities.printGServerRuntimeLog(" gServer IP:" + this.ip);
 			this.fileLock.checkAndRecover();
 			try {
-				synchronized (SystemConf.getInstance().isIndexServer) {
+				/*synchronized (SystemConf.getInstance().isIndexServer) {
 					if (SystemConf.getInstance().isIndexServer == true) {
 						CpuUsage usage = CpuUsage.getUsage();
 						if (usage.cpuUsage > SystemConf.getInstance().gServer_usage_cpu
@@ -1118,7 +1118,7 @@ public class GServer extends GNode implements Runnable, GServerProtocol {
 							}
 						}
 					}
-				}
+				}*/
 				Thread.sleep(15000);
 			} catch (InterruptedException e) {
 

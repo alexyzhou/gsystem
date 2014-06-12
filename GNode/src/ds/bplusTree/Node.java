@@ -1,13 +1,19 @@
 package ds.bplusTree; 
  
+import java.io.Serializable;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
  
-public class Node<T extends Comparable<T>, V> { 
+public class Node<T extends Comparable<T>, V> implements Serializable { 
      
-    /** 是否为叶子节点 */ 
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 7491570428687533355L;
+
+	/** 是否为叶子节点 */ 
     protected boolean isLeaf; 
      
     /** 是否为根节点*/ 

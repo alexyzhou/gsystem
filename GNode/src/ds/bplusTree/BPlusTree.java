@@ -1,12 +1,18 @@
 package ds.bplusTree;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class BPlusTree<T extends Comparable<T>, V> implements B<T,V> {
+public class BPlusTree<T extends Comparable<T>, V> implements B<T,V>, Serializable {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -889393442908646819L;
+
 	/** lock */
 	ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 	

@@ -17,17 +17,19 @@ public class TraverseJobParameters implements Writable {
 	public TraversalMethod method;
 	public int maxdepth;
 	public long beginTime;
+	public String client_ip;
 	
 	public TraverseJobParameters() {
 		jobID = new UUIDWritable();
 	}
 
 	public TraverseJobParameters(UUID jobID, TraversalMethod method,
-			int maxdepth, long beginTime) {
+			int maxdepth, long beginTime, String client_IP) {
 		this.jobID = new UUIDWritable(jobID);
 		this.method = method;
 		this.maxdepth = maxdepth;
 		this.beginTime = beginTime;
+		this.client_ip = client_IP;
 	}
 
 
@@ -49,6 +51,7 @@ public class TraverseJobParameters implements Writable {
 		}
 		maxdepth = input.readInt();
 		beginTime = input.readLong();
+		client_ip = input.readUTF();
 	}
 
 	@Override
@@ -68,6 +71,7 @@ public class TraverseJobParameters implements Writable {
 		}
 		output.writeInt(maxdepth);
 		output.writeLong(beginTime);
+		output.writeUTF(client_ip);
 	}
 
 }
