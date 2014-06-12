@@ -41,7 +41,7 @@ public class CreateGraphByBatch {
 		checkDatabaseIsRunning();
 
 		CreateGraphByBatch objBatch = new CreateGraphByBatch();
-		objBatch.createSimpleGraphFromFile("/Users/alex/Documents/exData/100.csv");
+		objBatch.createSimpleGraphFromFile("/Users/alex/Documents/exData/20000.csv");
 	}
 
 	private Map<String, String> nodeIDs = new HashMap<String, String>();

@@ -11,6 +11,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.ws.rs.core.MediaType;
 
@@ -23,7 +24,7 @@ public class Utilities {
 
 	private static String SERVER_ROOT_URI = "http://127.0.0.1:7474/db/data/";
 
-	private static final int BATCH_MAX_TRANS = 10000;
+	private static final int BATCH_MAX_TRANS = 20000;
 
 	private static final String ATTR_NODE_ID = "ID";
 	private static final String ATTR_NODE_FLAG = "Restriction_Flag";
@@ -41,8 +42,11 @@ public class Utilities {
 
 	private static final String ATTR_EDGE_TYPE_TRAN = "Transfer_Money";
 
-	private static Map<String, String> nodeIDs = new HashMap<String, String>();
+	private static Map<String, String> nodeIDs = new HashMap<String, String>(); // real id
+	private static Map<String, String> nodeIDIteration = new HashMap<String, String>(); // real id
+	private static Map<String, String> nodeIDFromTaskIDs = new HashMap<String, String>();
 	private static Long taskID;
+	private static Long nodeID;
 
 	protected static void checkDatabaseIsRunning() {
 		// START SNIPPET: checkServer
@@ -145,9 +149,21 @@ public class Utilities {
 
 		StringBuilder sb = new StringBuilder();
 		sb.append("{ \"method\" : \"POST\",");
-		sb.append(" \"to\" : \"{" + sourceNodeID + "}/relationships\",");
+		
+		if (nodeIDs.containsKey(sourceNodeID)) {
+			// we already inserted this node at iterations before
+			sb.append(" \"to\" : \"/node/" + nodeIDs.get(sourceNodeID) + "/relationships\",");
+		} else {
+			sb.append(" \"to\" : \"{" + nodeIDFromTaskIDs.get(sourceNodeID) + "}/relationships\",");
+		}
+		
 		sb.append(" \"id\" : " + id + ",");
-		sb.append(" \"body\" : { \"to\" : \"{" + desNodeID + "}\",");
+		
+		if (nodeIDs.containsKey(desNodeID)) {
+			sb.append(" \"body\" : { \"to\" : \"/node/" + nodeIDs.get(desNodeID) + "\",");
+		} else {
+			sb.append(" \"body\" : { \"to\" : \"{" + nodeIDFromTaskIDs.get(desNodeID) + "}\",");
+		}
 
 		if (edge.isEmpty()) {
 
@@ -169,8 +185,8 @@ public class Utilities {
 
 	private static String appendStringByCheckAndInsertAccount(
 			String... attributes) {
-		if (nodeIDs.get(attributes[0]) != null) {
-			// already inserted this node
+		if (nodeIDs.get(attributes[0]) != null || nodeIDFromTaskIDs.get(attributes[0]) != null) {
+			// already inserted this node at last iteration
 			return "";
 		} else {
 			Map<String, String> attris = new HashMap<>();
@@ -179,7 +195,8 @@ public class Utilities {
 			attris.put(ATTR_NODE_CREATION_TIME, attributes[2]);
 			attris.put(ATTR_NODE_EMAILDOMAIN, attributes[3]);
 
-			nodeIDs.put(attributes[0], (++taskID).toString());
+			nodeIDFromTaskIDs.put(attributes[0], (++taskID).toString()); // store task id
+			nodeIDIteration.put(attributes[0], (++nodeID).toString()); // store real id
 
 			return appendStringByInsertNode(taskID.toString(), attris) + ",";
 		}
@@ -249,6 +266,9 @@ public class Utilities {
 	}
 
 	public static void createGraphFromFile(String masterIP, String filePath) {
+		
+		int ITERATION_MAX = 3;
+		int itearation = 0;
 
 		SERVER_ROOT_URI = "http://" + masterIP + ":7474/db/data/";
 
@@ -260,7 +280,9 @@ public class Utilities {
 
 			// initialization
 			nodeIDs.clear();
+			nodeIDIteration.clear();
 			taskID = 0l;
+			nodeID = -1l;
 
 			StringBuilder sbu = new StringBuilder();
 			sbu.append("[");
@@ -271,18 +293,21 @@ public class Utilities {
 
 				String[] values = line.split(",");
 				// sender
-//				sbu.append(appendStringByCheckAndInsertAccount(values[1],
-//						values[2], values[3], values[4]));
-				String senderID = createNodeByCheckAndInsertAccount(values[1],
-						values[2], values[3], values[4]);
+				sbu.append(appendStringByCheckAndInsertAccount(values[1],
+						values[2], values[3], values[4]));
+//				String senderID = createNodeByCheckAndInsertAccount(values[1],
+//						values[2], values[3], values[4]);
 				// receiver
-//				sbu.append(appendStringByCheckAndInsertAccount(values[5],
-//						values[6], values[7], values[8]));
-				String receiverID = createNodeByCheckAndInsertAccount(values[5],
-						values[6], values[7], values[8]);
+				sbu.append(appendStringByCheckAndInsertAccount(values[5],
+						values[6], values[7], values[8]));
+//				String receiverID = createNodeByCheckAndInsertAccount(values[5],
+//						values[6], values[7], values[8]);
+				
+				//System.out.println(receiverID);
+				
 				// transaction
 				sbu.append(appendStringByInsertTransaction(
-						senderID, receiverID,
+						values[1], values[5],
 						values[0], values[9], values[10], values[11],
 						values[12], values[13], values[14], values[15]));
 
@@ -293,8 +318,13 @@ public class Utilities {
 					sendCmd(sbu.toString());
 					sbu.delete(0, sbu.length());
 					sbu.append("[");
+					
+					for (Entry<String, String> entry : nodeIDIteration.entrySet()) {
+						nodeIDs.put(entry.getKey(), entry.getValue());
+					}
+					nodeIDIteration.clear();
+					nodeIDFromTaskIDs.clear();
 				}
-
 			}
 			if (sbu.length() != 0) {
 				sbu.deleteCharAt(sbu.length() - 1);

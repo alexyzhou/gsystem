@@ -13,6 +13,9 @@ public class TraversalTest {
 			System.out.println("Usage: TraversalTest vertexID Order[D;B] maxDepth");
 			return;
 		}
+		//String vertexID = "0";
+		//String Order = "B";
+		//int maxDepth = 2;
 		String order = TraversalDefinition.BREADTH_FIRST;
 		if (args[1].equals("D")) {
 			order = TraversalDefinition.DEPTH_FIRST;
